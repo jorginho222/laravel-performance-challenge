@@ -3,22 +3,19 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\IndexProductRequest;
+use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(IndexProductRequest $request): AnonymousResourceCollection
     {
-        $filters = $request->validate([
-            'category_id' => ['sometimes', 'uuid'],
-            'status' => ['sometimes', Rule::in(Product::STATUSES)],
-            'search' => ['sometimes', 'string', 'max:255'],
-        ]);
+        $filters = $request->validated();
 
         $products = Product::with('category')
             ->when($filters['category_id'] ?? null, fn ($q, $v) => $q->where('category_id', $v))
@@ -30,9 +27,9 @@ class ProductController extends Controller
         return ProductResource::collection($products);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreProductRequest $request): JsonResponse
     {
-        $product = Product::create($request->validate($this->rules()));
+        $product = Product::create($request->validated());
 
         return (new ProductResource($product->load('category')))->response()->setStatusCode(201);
     }
@@ -42,9 +39,9 @@ class ProductController extends Controller
         return new ProductResource($product->load('category'));
     }
 
-    public function update(Request $request, Product $product): ProductResource
+    public function update(UpdateProductRequest $request, Product $product): ProductResource
     {
-        $product->update($request->validate($this->rules(partial: true)));
+        $product->update($request->validated());
 
         return new ProductResource($product->load('category'));
     }
@@ -58,18 +55,5 @@ class ProductController extends Controller
         $product->delete();
 
         return response()->json(null, 204);
-    }
-
-    private function rules(bool $partial = false): array
-    {
-        $sometimes = $partial ? ['sometimes'] : [];
-
-        return [
-            'name' => [...$sometimes, 'required', 'string', 'max:255'],
-            'category_id' => [...$sometimes, 'required', 'uuid', 'exists:categories,id'],
-            'price' => [...$sometimes, 'required', 'numeric', 'min:0', 'max:99999999.99'],
-            'stock' => [...$sometimes, 'required', 'integer', 'min:0'],
-            'status' => [...$sometimes, 'required', Rule::in(Product::STATUSES)],
-        ];
     }
 }

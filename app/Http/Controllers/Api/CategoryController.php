@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreCategoryRequest;
+use App\Http\Requests\UpdateCategoryRequest;
 use App\Http\Resources\CategoryResource;
 use App\Models\Category;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class CategoryController extends Controller
@@ -16,11 +17,9 @@ class CategoryController extends Controller
         return CategoryResource::collection(Category::orderBy('name')->paginate());
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreCategoryRequest $request): JsonResponse
     {
-        $category = Category::create($request->validate([
-            'name' => ['required', 'string', 'max:255'],
-        ]));
+        $category = Category::create($request->validated());
 
         return (new CategoryResource($category))->response()->setStatusCode(201);
     }
@@ -30,11 +29,9 @@ class CategoryController extends Controller
         return new CategoryResource($category);
     }
 
-    public function update(Request $request, Category $category): CategoryResource
+    public function update(UpdateCategoryRequest $request, Category $category): CategoryResource
     {
-        $category->update($request->validate([
-            'name' => ['sometimes', 'required', 'string', 'max:255'],
-        ]));
+        $category->update($request->validated());
 
         return new CategoryResource($category);
     }
