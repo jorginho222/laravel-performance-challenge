@@ -1,0 +1,40 @@
+@host = http://localhost
+
+### Login (stores the token for the requests below)
+POST {{host}}/api/login
+Accept: application/json
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "password"
+}
+
+> {%
+    client.global.set("token", response.body.token);
+%}
+
+### Search products by name prefix
+GET {{host}}/api/products?search=au&category_id=01a0edee-18ce-732e-b88d-ce31ddbe92d5&status=active
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Search + status filter
+GET {{host}}/api/products?search=ci&status=active
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Search + category filter (replace the category id)
+GET {{host}}/api/products?search=ci&category_id=00000000-0000-0000-0000-000000000000
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Search, second page
+GET {{host}}/api/products?search=ci&page=2
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### No search (baseline)
+GET {{host}}/api/products
+Accept: application/json
+Authorization: Bearer {{token}}

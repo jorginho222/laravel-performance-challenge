@@ -20,7 +20,7 @@ class ProductController extends Controller
         $products = Product::with('category')
             ->when($filters['category_id'] ?? null, fn ($q, $v) => $q->where('category_id', $v))
             ->when($filters['status'] ?? null, fn ($q, $v) => $q->where('status', $v))
-            ->when($filters['search'] ?? null, fn ($q, $v) => $q->where('name', 'like', "%{$v}%"))
+            ->when($filters['search'] ?? null, fn ($q, $v) => $q->where('name', 'like', "{$v}%"))
             ->orderBy('name')
             ->paginate();
 

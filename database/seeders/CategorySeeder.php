@@ -7,7 +7,7 @@ use Illuminate\Database\Seeder;
 
 class CategorySeeder extends Seeder
 {
-    public const COUNT = 20;
+    public const COUNT = 100;
 
     public function run(): void
     {
