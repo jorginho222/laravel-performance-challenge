@@ -8,21 +8,15 @@ use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Services\ProductSearchService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class ProductController extends Controller
 {
-    public function index(IndexProductRequest $request): AnonymousResourceCollection
+    public function index(IndexProductRequest $request, ProductSearchService $search): AnonymousResourceCollection
     {
-        $filters = $request->validated();
-
-        $products = Product::with('category')
-            ->when($filters['category_id'] ?? null, fn ($q, $v) => $q->where('category_id', $v))
-            ->when($filters['status'] ?? null, fn ($q, $v) => $q->where('status', $v))
-            ->when($filters['search'] ?? null, fn ($q, $v) => $q->where('name', 'like', "{$v}%"))
-            ->orderBy('name')
-            ->paginate();
+        $products = $search->paginate($request->validated());
 
         return ProductResource::collection($products);
     }

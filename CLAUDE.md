@@ -76,6 +76,11 @@ for a large data set, do NOT change the seeders permanently; load it with raw SQ
 5. **Rebuild the indexes after loading:** `sail artisan migrate` (re-applies the index migration).
 6. Verify: row count, `count(distinct id)`, `SHOW INDEX FROM products`, and `EXPLAIN` on the queries under test.
 
+7. **Reindex Meilisearch** (raw SQL bypasses Scout events; product search reads from Meilisearch):
+   `sail artisan scout:sync-index-settings` then
+   `sail exec -e SCOUT_QUEUE=false laravel.test php artisan scout:import "App\Models\Product"`
+   (1M docs: ~1-2 min; `SCOUT_QUEUE=false` avoids flooding the database queue). Run `scout:flush` first after `migrate:fresh`.
+
 Gotchas:
 - MySQL names the foreign key's own index `products_category_id_foreign` (not Laravel's default
   `products_category_id_index`). It auto-drops that implicit index when another index starting with
