@@ -122,6 +122,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Category Cache
+    |--------------------------------------------------------------------------
+    |
+    | Store and TTL in seconds for the cached category listing. Entries are never
+    | invalidated on change: a modified category shows up once the TTL expires.
+    |
+    */
+
+    'categories' => [
+        'store' => env('CATEGORY_CACHE_STORE', 'redis'),
+        'ttl' => (int) env('CATEGORY_CACHE_TTL', 3600),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Serializable Classes
     |--------------------------------------------------------------------------
     |

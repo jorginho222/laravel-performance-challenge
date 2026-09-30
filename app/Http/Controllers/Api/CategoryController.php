@@ -7,14 +7,24 @@ use App\Http\Requests\StoreCategoryRequest;
 use App\Http\Requests\UpdateCategoryRequest;
 use App\Http\Resources\CategoryResource;
 use App\Models\Category;
+use App\Services\CategoryCache;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request): JsonResponse
     {
-        return CategoryResource::collection(Category::orderBy('name')->paginate());
+        $page = max(1, $request->integer('page', 1));
+
+        $payload = CategoryCache::remember(
+            "index:page:{$page}",
+            fn () => CategoryResource::collection(Category::orderBy('name')->paginate())
+                ->response($request)
+                ->getData(true),
+        );
+
+        return response()->json($payload);
     }
 
     public function store(StoreCategoryRequest $request): JsonResponse
