@@ -1,0 +1,21 @@
+@host = http://localhost
+
+### Login (stores the token for the requests below)
+POST {{host}}/api/login
+Accept: application/json
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "password"
+}
+
+> {%
+    client.global.set("token", response.body.token);
+%}
+
+### Search categories
+GET {{host}}/api/categories?page=2
+Accept: application/json
+Authorization: Bearer {{token}}
+
