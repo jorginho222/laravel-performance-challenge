@@ -65,11 +65,15 @@ for a large data set, do NOT change the seeders permanently; load it with raw SQ
 4. **Generate rows in SQL, not PHP.** Use `INSERT ... SELECT` from a number sequence, ~100k rows per
    statement (cross join of five `SELECT 0 ... SELECT 9` digit tables), executed with `DB::insert`
    (run it from a temporary seeder or `tinker`, and delete it afterwards). Per column:
-   - `id`: time-ordered UUIDv7-style string so the primary key appends instead of splitting pages:
+   - `id`: time-ordered UUIDv7-style string so the primary key appends instead of splitting pages
+     (wrap it in `LOWER(...)`: MySQL's `HEX()` is uppercase, Laravel's UUIDs are lowercase):
      `CONCAT(SUBSTR(LPAD(HEX(:baseMs + n),12,'0'),1,8),'-',SUBSTR(LPAD(HEX(:baseMs + n),12,'0'),9,4),'-7',LPAD(HEX(FLOOR(RAND()*4096)),3,'0'),'-',ELT(1+FLOOR(RAND()*4),'8','9','a','b'),LPAD(HEX(FLOOR(RAND()*4096)),3,'0'),'-',LPAD(HEX(FLOOR(RAND()*281474976710656)),12,'0'))`
      where `baseMs = now in ms + chunk offset`.
    - `name`: `CONCAT_WS(' ', w, w, w)` with `w = ELT(1+FLOOR(RAND()*200), <200 lorem words as bindings>)`
      (words from `Faker\Provider\Lorem::$wordList`, protected: read it with `ReflectionProperty`).
+   - categories (5000, `name` is unique): derive each two-word name from the row number `n`
+     (`CONCAT_WS(' ', ELT(1+FLOOR(n/N), <words>), ELT(1+(n MOD N), <words>))`, `N` = number of
+     distinct words, ~182) instead of random words, which would collide. Skip `CategorySeeder` then.
    - `category_id`: `ELT(1+FLOOR(RAND()*N), <category ids as bindings>)`.
    - `price`: `ROUND(1+RAND()*499,2)`, `stock`: `FLOOR(RAND()*101)`,
      `status`: `IF(RAND()<0.9,'active','inactive')`, timestamps `NOW()`.
@@ -80,6 +84,8 @@ for a large data set, do NOT change the seeders permanently; load it with raw SQ
    `sail artisan scout:sync-index-settings` then
    `sail exec -e SCOUT_QUEUE=false laravel.test php artisan scout:import "App\Models\Product"`
    (1M docs: ~1-2 min; `SCOUT_QUEUE=false` avoids flooding the database queue). Run `scout:flush` first after `migrate:fresh`.
+   The category listing is cached in Redis with a TTL only (no invalidation on change): run
+   `sail artisan cache:clear redis` after `migrate:fresh` or bulk changes to categories.
 
 Gotchas:
 - MySQL names the foreign key's own index `products_category_id_foreign` (not Laravel's default
