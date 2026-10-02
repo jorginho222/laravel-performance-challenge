@@ -1,0 +1,28 @@
+@host = http://localhost
+
+### Login (stores the token for the requests below)
+POST {{host}}/api/login
+Accept: application/json
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "password"
+}
+
+> {%
+    client.global.set("token", response.body.token);
+%}
+
+### Create an order (replace the product ids with existing ones)
+POST {{host}}/api/orders
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "products": [
+    { "product_id": "01a0f2e3-ddef-73e3-9a02-50b484c142d2", "quantity": 2 },
+    { "product_id": "01a0f2e3-ddf0-7801-8068-cfb273a73ec9", "quantity": 3 }
+  ]
+}
