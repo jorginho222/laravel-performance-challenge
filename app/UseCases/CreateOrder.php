@@ -60,7 +60,7 @@ class CreateOrder
         });
 
         // Fired once the transaction is committed, so listeners never see a rolled-back order.
-        OrderCreated::dispatch($order);
+        OrderCreated::dispatch($order->id);
 
         return $order;
     }

@@ -35,8 +35,7 @@ class OrderConfirmationEmailTest extends TestCase
         $response = $this->postJson('/api/orders', ['products' => [['product_id' => $product->id, 'quantity' => 1]]])
             ->assertCreated();
 
-        Event::assertDispatched(OrderCreated::class, fn ($e) => $e->order->id === $response->json('data.id')
-            && $e->order->user->is($user));
+        Event::assertDispatched(OrderCreated::class, fn ($e) => $e->orderId === $response->json('data.id'));
     }
 
     public function test_no_event_is_dispatched_when_the_order_is_not_created(): void
@@ -55,7 +54,7 @@ class OrderConfirmationEmailTest extends TestCase
         $order = $this->order(User::factory()->create());
 
         Queue::assertPushed(CallQueuedListener::class, fn ($job) => $job->class === SendOrderConfirmationEmail::class
-            && $job->data[0]->order->is($order));
+            && $job->data[0]->orderId === $order->id);
     }
 
     public function test_the_listener_sends_the_confirmation_email_to_the_orders_user(): void
@@ -68,14 +67,27 @@ class OrderConfirmationEmailTest extends TestCase
         Mail::assertSentCount(1);
     }
 
+    public function test_the_listener_skips_a_deleted_order(): void
+    {
+        Mail::fake();
+        Event::fake([OrderCreated::class]);
+        $order = $this->order(User::factory()->create());
+        $order->products()->detach();
+        $order->delete();
+
+        app(SendOrderConfirmationEmail::class)->handle(new OrderCreated($order->id));
+
+        Mail::assertNothingSent();
+    }
+
     public function test_a_failed_listener_is_logged(): void
     {
         Log::spy();
         $order = $this->order(User::factory()->create());
 
-        app(SendOrderConfirmationEmail::class)->failed(new OrderCreated($order), new RuntimeException('smtp down'));
+        app(SendOrderConfirmationEmail::class)->failed(new OrderCreated($order->id), new RuntimeException('smtp down'));
 
-        Log::shouldHaveReceived('error')->once()->withArgs(fn ($message, $context) => str_contains($message, "#{$order->number}")
+        Log::shouldHaveReceived('error')->once()->withArgs(fn ($message, $context) => str_contains($message, $order->id)
             && $context['exception'] === 'smtp down');
     }
 

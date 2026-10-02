@@ -3,6 +3,7 @@
 namespace App\Listeners;
 
 use App\Events\OrderCreated;
+use App\Models\Order;
 use App\Services\EmailSender;
 use App\UseCases\BuildOrderConfirmationEmail;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -21,8 +22,6 @@ class SendOrderConfirmationEmail implements ShouldQueue
 
     public int $tries = 3;
 
-    public bool $deleteWhenMissingModels = true;
-
     /**
      * @return array<int, int>
      */
@@ -39,15 +38,20 @@ class SendOrderConfirmationEmail implements ShouldQueue
 
     public function handle(OrderCreated $event): void
     {
-        $order = $event->order->loadMissing('user', 'products');
+        $order = Order::with('user', 'products')->find($event->orderId);
+
+        // A deleted order has nobody to confirm to, so the job ends without retrying.
+        if ($order === null) {
+            return;
+        }
 
         $this->sender->send($order->user->email, $this->buildEmail->handle($order));
     }
 
     public function failed(OrderCreated $event, Throwable $exception): void
     {
-        Log::error("Order confirmation email for order #{$event->order->number} failed.", [
-            'order_id' => $event->order->id,
+        Log::error("Order confirmation email for order {$event->orderId} failed.", [
+            'order_id' => $event->orderId,
             'exception' => $exception->getMessage(),
         ]);
     }
