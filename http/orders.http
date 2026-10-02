@@ -22,7 +22,7 @@ Authorization: Bearer {{token}}
 
 {
   "products": [
-    { "product_id": "01a0f2e3-ddef-73e3-9a02-50b484c142d2", "quantity": 2 },
-    { "product_id": "01a0f2e3-ddf0-7801-8068-cfb273a73ec9", "quantity": 3 }
+    { "product_id": "01a0f2e3-ddf4-76de-9eb0-4432e30510cb", "quantity": 2 },
+    { "product_id": "01a0f2e3-ddf6-7a89-9b31-7e33aea1f8ce", "quantity": 3 }
   ]
 }
