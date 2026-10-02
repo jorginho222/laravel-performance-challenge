@@ -15,7 +15,7 @@ Content-Type: application/json
 %}
 
 ### Search products by name prefix
-GET {{host}}/api/products?search=aut&category_id=01a0edee-18ce-732e-b88d-ce31ddbe92d5&status=active&page=2
+GET {{host}}/api/products?category_id=01a0edee-18ce-732e-b88d-ce31ddbe92d5&status=active
 Accept: application/json
 Authorization: Bearer {{token}}
 
