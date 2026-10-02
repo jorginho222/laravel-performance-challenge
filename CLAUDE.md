@@ -98,3 +98,12 @@ Gotchas:
 - Stopping a background `sail artisan ...` from the host does not stop the process in the container;
   kill it with `docker exec <laravel.test container> pkill -f "artisan <command>"`.
 - Do not commit unless the user asks.
+
+## Dev services (Sail)
+
+- `queue` container: `queue:listen` processes the Redis queue automatically (order confirmation
+  emails, Scout index updates). Logs: `docker logs <project>-queue-1`.
+- Failed jobs are stored in the `failed_jobs` table (Laravel has no Redis failed-job driver):
+  `sail artisan queue:failed`, `sail artisan queue:retry all`.
+- Mailpit catches outgoing mail: inbox at http://localhost:8025 (SMTP `mailpit:1025`).
+- Redis also backs the category cache (`sail artisan cache:clear redis` to reset it).
