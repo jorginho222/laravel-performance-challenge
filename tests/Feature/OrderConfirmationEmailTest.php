@@ -30,7 +30,7 @@ class OrderConfirmationEmailTest extends TestCase
         Event::fake([OrderCreated::class]);
         $user = User::factory()->create();
         Sanctum::actingAs($user);
-        $product = Product::factory()->create();
+        $product = Product::factory()->create(['stock' => 10]);
 
         $response = $this->postJson('/api/orders', ['products' => [['product_id' => $product->id, 'quantity' => 1]]])
             ->assertCreated();
@@ -107,7 +107,7 @@ class OrderConfirmationEmailTest extends TestCase
 
     private function order(User $user): Order
     {
-        $product = Product::factory()->create(['name' => 'blue widget', 'price' => '19.99']);
+        $product = Product::factory()->create(['name' => 'blue widget', 'price' => '19.99', 'stock' => 10]);
 
         return app(CreateOrder::class)->handle($user, [['product_id' => $product->id, 'quantity' => 2]]);
     }

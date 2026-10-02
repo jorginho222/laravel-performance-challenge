@@ -9,16 +9,19 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class CreateOrder
 {
     /**
      * Create an order for a user from product/quantity lines and announce it with OrderCreated. The order number is the next value of
-     * the "orders" sequence and the total is calculated from the current product prices.
+     * the "orders" sequence and the total is calculated from the current product prices. Each product's stock is
+     * discounted by the ordered quantity.
      *
      * @param  array<int, array{product_id: string, quantity: int}>  $items
      *
      * @throws ModelNotFoundException when a product does not exist
+     * @throws ValidationException when a product is not active or does not have enough stock
      */
     public function handle(User $user, array $items): Order
     {
@@ -29,10 +32,18 @@ class CreateOrder
         }
 
         $order = DB::transaction(function () use ($user, $quantities) {
-            $products = Product::whereIn('id', array_keys($quantities))->get();
+            // Locked until the transaction ends, so concurrent orders cannot oversell the same stock
+            // (ordered by id so concurrent orders lock rows in the same order and cannot deadlock).
+            $products = Product::whereIn('id', array_keys($quantities))->orderBy('id')->lockForUpdate()->get();
 
             if ($products->count() !== count($quantities)) {
                 throw (new ModelNotFoundException)->setModel(Product::class, array_diff(array_keys($quantities), $products->modelKeys()));
+            }
+
+            $this->ensureAvailable($products, $quantities);
+
+            foreach ($products as $product) {
+                $product->decrement('stock', $quantities[$product->id]);
             }
 
             $order = Order::create([
@@ -52,6 +63,28 @@ class CreateOrder
         OrderCreated::dispatch($order);
 
         return $order;
+    }
+
+    /**
+     * @param  Collection<int, Product>  $products
+     * @param  array<string, int>  $quantities
+     *
+     * @throws ValidationException
+     */
+    private function ensureAvailable($products, array $quantities): void
+    {
+        $errors = [];
+        foreach ($products as $product) {
+            if ($product->status !== 'active') {
+                $errors["products.{$product->id}"] = "Product {$product->name} is not active.";
+            } elseif ($product->stock < $quantities[$product->id]) {
+                $errors["products.{$product->id}"] = "Product {$product->name} does not have enough stock.";
+            }
+        }
+
+        if ($errors) {
+            throw ValidationException::withMessages($errors);
+        }
     }
 
     /**

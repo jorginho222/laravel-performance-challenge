@@ -8,6 +8,7 @@ use App\Models\User;
 use App\UseCases\CreateOrder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -27,8 +28,8 @@ class CreateOrderTest extends TestCase
 
     public function test_it_creates_an_order_with_a_calculated_total_and_its_lines(): void
     {
-        $a = Product::factory()->create(['price' => '10.10']);
-        $b = Product::factory()->create(['price' => '0.35']);
+        $a = Product::factory()->create(['price' => '10.10', 'stock' => 10]);
+        $b = Product::factory()->create(['price' => '0.35', 'stock' => 10]);
 
         $order = app(CreateOrder::class)->handle($this->user, [
             ['product_id' => $a->id, 'quantity' => 3],
@@ -47,7 +48,7 @@ class CreateOrderTest extends TestCase
 
     public function test_order_numbers_are_correlative(): void
     {
-        $product = Product::factory()->create(['price' => 1]);
+        $product = Product::factory()->create(['price' => 1, 'stock' => 10]);
         $useCase = app(CreateOrder::class);
 
         $numbers = collect(range(1, 3))
@@ -58,7 +59,7 @@ class CreateOrderTest extends TestCase
 
     public function test_a_failed_order_does_not_consume_a_number(): void
     {
-        $product = Product::factory()->create(['price' => 1]);
+        $product = Product::factory()->create(['price' => 1, 'stock' => 10]);
         $useCase = app(CreateOrder::class);
 
         $useCase->handle($this->user, [['product_id' => $product->id, 'quantity' => 1]]);
@@ -75,7 +76,7 @@ class CreateOrderTest extends TestCase
 
     public function test_repeated_products_are_merged_into_one_line(): void
     {
-        $product = Product::factory()->create(['price' => '2.50']);
+        $product = Product::factory()->create(['price' => '2.50', 'stock' => 10]);
 
         $order = app(CreateOrder::class)->handle($this->user, [
             ['product_id' => $product->id, 'quantity' => 1],
@@ -86,10 +87,71 @@ class CreateOrderTest extends TestCase
         $this->assertSame(4, $order->products->first()->pivot->quantity);
     }
 
+    public function test_it_discounts_the_stock_of_the_ordered_products(): void
+    {
+        $product = Product::factory()->create(['stock' => 10]);
+
+        app(CreateOrder::class)->handle($this->user, [
+            ['product_id' => $product->id, 'quantity' => 3],
+            ['product_id' => $product->id, 'quantity' => 2],
+        ]);
+
+        $this->assertSame(5, $product->fresh()->stock);
+    }
+
+    public function test_it_rejects_inactive_products_and_changes_nothing(): void
+    {
+        $ok = Product::factory()->create(['stock' => 10]);
+        $inactive = Product::factory()->create(['stock' => 10, 'status' => 'inactive']);
+
+        try {
+            app(CreateOrder::class)->handle($this->user, [
+                ['product_id' => $ok->id, 'quantity' => 1],
+                ['product_id' => $inactive->id, 'quantity' => 1],
+            ]);
+            $this->fail('An inactive product should abort the order.');
+        } catch (ValidationException $e) {
+            $this->assertSame(["products.{$inactive->id}"], array_keys($e->errors()));
+        }
+
+        $this->assertSame(10, $ok->fresh()->stock);
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_it_rejects_products_without_enough_stock_and_changes_nothing(): void
+    {
+        $ok = Product::factory()->create(['stock' => 10]);
+        $short = Product::factory()->create(['stock' => 2]);
+
+        try {
+            app(CreateOrder::class)->handle($this->user, [
+                ['product_id' => $ok->id, 'quantity' => 1],
+                ['product_id' => $short->id, 'quantity' => 3],
+            ]);
+            $this->fail('Insufficient stock should abort the order.');
+        } catch (ValidationException $e) {
+            $this->assertSame(["products.{$short->id}"], array_keys($e->errors()));
+        }
+
+        $this->assertSame(10, $ok->fresh()->stock);
+        $this->assertSame(2, $short->fresh()->stock);
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_the_endpoint_responds_unprocessable_when_stock_is_insufficient(): void
+    {
+        Sanctum::actingAs($this->user);
+        $product = Product::factory()->create(['stock' => 1]);
+
+        $this->postJson('/api/orders', ['products' => [['product_id' => $product->id, 'quantity' => 2]]])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors("products.{$product->id}");
+    }
+
     public function test_the_endpoint_creates_an_order(): void
     {
         Sanctum::actingAs($this->user);
-        $product = Product::factory()->create(['name' => 'blue widget', 'price' => '19.99']);
+        $product = Product::factory()->create(['name' => 'blue widget', 'price' => '19.99', 'stock' => 10]);
 
         $this->postJson('/api/orders', ['products' => [['product_id' => $product->id, 'quantity' => 2]]])
             ->assertCreated()
