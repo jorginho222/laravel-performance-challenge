@@ -2,15 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Events\OrderCreated;
-use App\Listeners\SendOrderConfirmationEmail;
-use App\Mail\OrderConfirmationMail;
-use App\Models\Order;
-use App\Models\Product;
-use App\Models\User;
-use App\Services\EmailSender;
-use App\UseCases\BuildOrderConfirmationEmail;
-use App\UseCases\CreateOrder;
 use Illuminate\Events\CallQueuedListener;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -19,6 +10,17 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
 use RuntimeException;
+use Src\Catalog\Infrastructure\Persistence\Product;
+use Src\Identity\Infrastructure\Persistence\User;
+use Src\Ordering\Application\CreateOrder\CreateOrder;
+use Src\Ordering\Application\CreateOrder\CreateOrderCommand;
+use Src\Ordering\Application\CreateOrder\OrderItem;
+use Src\Ordering\Application\OrderData;
+use Src\Ordering\Domain\Events\OrderCreated;
+use Src\Ordering\Infrastructure\Listeners\SendOrderConfirmationEmail;
+use Src\Ordering\Infrastructure\Mail\LaravelOrderConfirmationMailer;
+use Src\Ordering\Infrastructure\Mail\OrderConfirmationMail;
+use Src\Ordering\Infrastructure\Persistence\OrderModel;
 use Tests\TestCase;
 
 class OrderConfirmationEmailTest extends TestCase
@@ -63,7 +65,7 @@ class OrderConfirmationEmailTest extends TestCase
         $order = $this->order(User::factory()->create(['email' => 'buyer@example.com']));
 
         Mail::assertSent(OrderConfirmationMail::class, fn (OrderConfirmationMail $mail) => $mail->hasTo('buyer@example.com')
-            && $mail->order->is($order));
+            && $mail->order->id === $order->id);
         Mail::assertSentCount(1);
     }
 
@@ -72,8 +74,7 @@ class OrderConfirmationEmailTest extends TestCase
         Mail::fake();
         Event::fake([OrderCreated::class]);
         $order = $this->order(User::factory()->create());
-        $order->products()->detach();
-        $order->delete();
+        OrderModel::destroy($order->id);
 
         app(SendOrderConfirmationEmail::class)->handle(new OrderCreated($order->id));
 
@@ -91,36 +92,35 @@ class OrderConfirmationEmailTest extends TestCase
             && $context['exception'] === 'smtp down');
     }
 
-    public function test_the_use_case_builds_the_email_with_the_order_details_without_sending_it(): void
+    public function test_the_email_shows_the_order_details(): void
+    {
+        Event::fake([OrderCreated::class]);
+        $order = $this->order(User::factory()->create());
+
+        $mail = new OrderConfirmationMail($order);
+
+        $this->assertSame("Order #{$order->number} confirmed", $mail->envelope()->subject);
+        $mail->assertSeeInHtml("#{$order->number}");
+        $mail->assertSeeInHtml('blue widget');
+        $mail->assertSeeInHtml('19.99');
+        $mail->assertSeeInHtml('39.98');
+    }
+
+    public function test_the_mailer_delivers_the_email_to_the_recipient(): void
     {
         Mail::fake();
         Event::fake([OrderCreated::class]);
         $order = $this->order(User::factory()->create());
 
-        $mail = app(BuildOrderConfirmationEmail::class)->handle($order);
+        app(LaravelOrderConfirmationMailer::class)->send('buyer@example.com', $order);
 
-        $this->assertSame("Order #{$order->number} confirmed", $mail->envelope()->subject);
-        $mail->assertSeeInHtml("#{$order->number}");
-        $mail->assertSeeInHtml('blue widget');
-        $mail->assertSeeInHtml('39.98');
-        Mail::assertNothingSent();
+        Mail::assertSent(OrderConfirmationMail::class, fn ($m) => $m->hasTo('buyer@example.com') && $m->order === $order);
     }
 
-    public function test_the_sender_delivers_the_email_to_the_recipient(): void
-    {
-        Mail::fake();
-        Event::fake([OrderCreated::class]);
-        $mail = app(BuildOrderConfirmationEmail::class)->handle($this->order(User::factory()->create()));
-
-        app(EmailSender::class)->send('buyer@example.com', $mail);
-
-        Mail::assertSent(OrderConfirmationMail::class, fn ($m) => $m->hasTo('buyer@example.com'));
-    }
-
-    private function order(User $user): Order
+    private function order(User $user): OrderData
     {
         $product = Product::factory()->create(['name' => 'blue widget', 'price' => '19.99', 'stock' => 10]);
 
-        return app(CreateOrder::class)->handle($user, [['product_id' => $product->id, 'quantity' => 2]]);
+        return app(CreateOrder::class)->handle(new CreateOrderCommand($user->id, [new OrderItem($product->id, 2)]));
     }
 }

@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Src\Catalog\Infrastructure\Persistence\Category;
+use Src\Identity\Infrastructure\Persistence\User;
 use Tests\TestCase;
 
 class CategoryCacheTest extends TestCase

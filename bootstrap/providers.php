@@ -1,5 +1,11 @@
 <?php
 
+use App\Providers\AppServiceProvider;
+use Src\Ordering\Infrastructure\OrderingServiceProvider;
+use Src\Shared\Infrastructure\SharedServiceProvider;
+
 return [
-    App\Providers\AppServiceProvider::class,
+    AppServiceProvider::class,
+    SharedServiceProvider::class,
+    OrderingServiceProvider::class,
 ];

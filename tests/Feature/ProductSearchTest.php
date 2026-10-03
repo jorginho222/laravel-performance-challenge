@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\Product;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Src\Catalog\Infrastructure\Persistence\Category;
+use Src\Catalog\Infrastructure\Persistence\Product;
+use Src\Identity\Infrastructure\Persistence\User;
 use Tests\TestCase;
 
 class ProductSearchTest extends TestCase

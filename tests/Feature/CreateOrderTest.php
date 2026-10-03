@@ -2,15 +2,18 @@
 
 namespace Tests\Feature;
 
-use App\Models\Order;
-use App\Models\Product;
-use App\Models\User;
-use App\UseCases\CreateOrder;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Src\Catalog\Infrastructure\Persistence\Product;
+use Src\Identity\Infrastructure\Persistence\User;
+use Src\Ordering\Application\CreateOrder\CreateOrder;
+use Src\Ordering\Application\CreateOrder\CreateOrderCommand;
+use Src\Ordering\Application\CreateOrder\OrderItem;
+use Src\Ordering\Application\OrderData;
+use Src\Ordering\Application\OrderLineData;
+use Src\Ordering\Domain\Exceptions\ProductNotFound;
+use Src\Ordering\Domain\Exceptions\ProductsUnavailable;
 use Tests\TestCase;
 
 class CreateOrderTest extends TestCase
@@ -31,28 +34,21 @@ class CreateOrderTest extends TestCase
         $a = Product::factory()->create(['price' => '10.10', 'stock' => 10]);
         $b = Product::factory()->create(['price' => '0.35', 'stock' => 10]);
 
-        $order = app(CreateOrder::class)->handle($this->user, [
-            ['product_id' => $a->id, 'quantity' => 3],
-            ['product_id' => $b->id, 'quantity' => 2],
-        ]);
+        $order = $this->createOrder([$a->id => 3, $b->id => 2]);
 
         $this->assertSame(1, $order->number);
-        $this->assertTrue($order->user->is($this->user));
+        $this->assertSame($this->user->id, $order->customerId);
         $this->assertSame('31.00', $order->total);
-        $this->assertEqualsCanonicalizing(
-            [$a->id => 3, $b->id => 2],
-            $order->products->mapWithKeys(fn ($p) => [$p->id => $p->pivot->quantity])->all(),
-        );
+        $this->assertEqualsCanonicalizing([$a->id => 3, $b->id => 2], $this->lineQuantities($order));
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'user_id' => $this->user->id, 'number' => 1, 'total' => '31.00']);
         $this->assertDatabaseCount('order_product', 2);
     }
 
     public function test_order_numbers_are_correlative(): void
     {
         $product = Product::factory()->create(['price' => 1, 'stock' => 10]);
-        $useCase = app(CreateOrder::class);
 
-        $numbers = collect(range(1, 3))
-            ->map(fn () => $useCase->handle($this->user, [['product_id' => $product->id, 'quantity' => 1]])->number);
+        $numbers = collect(range(1, 3))->map(fn () => $this->createOrder([$product->id => 1])->number);
 
         $this->assertSame([1, 2, 3], $numbers->all());
     }
@@ -60,17 +56,16 @@ class CreateOrderTest extends TestCase
     public function test_a_failed_order_does_not_consume_a_number(): void
     {
         $product = Product::factory()->create(['price' => 1, 'stock' => 10]);
-        $useCase = app(CreateOrder::class);
 
-        $useCase->handle($this->user, [['product_id' => $product->id, 'quantity' => 1]]);
+        $this->createOrder([$product->id => 1]);
 
         try {
-            $useCase->handle($this->user, [['product_id' => $product->id, 'quantity' => 1], ['product_id' => fake()->uuid(), 'quantity' => 1]]);
+            $this->createOrder([$product->id => 1, fake()->uuid() => 1]);
             $this->fail('A missing product should abort the order.');
-        } catch (ModelNotFoundException) {
+        } catch (ProductNotFound) {
         }
 
-        $this->assertSame(2, $useCase->handle($this->user, [['product_id' => $product->id, 'quantity' => 1]])->number);
+        $this->assertSame(2, $this->createOrder([$product->id => 1])->number);
         $this->assertDatabaseCount('orders', 2);
     }
 
@@ -78,22 +73,22 @@ class CreateOrderTest extends TestCase
     {
         $product = Product::factory()->create(['price' => '2.50', 'stock' => 10]);
 
-        $order = app(CreateOrder::class)->handle($this->user, [
-            ['product_id' => $product->id, 'quantity' => 1],
-            ['product_id' => $product->id, 'quantity' => 3],
+        $order = $this->handle([
+            new OrderItem($product->id, 1),
+            new OrderItem($product->id, 3),
         ]);
 
         $this->assertSame('10.00', $order->total);
-        $this->assertSame(4, $order->products->first()->pivot->quantity);
+        $this->assertSame([$product->id => 4], $this->lineQuantities($order));
     }
 
     public function test_it_discounts_the_stock_of_the_ordered_products(): void
     {
         $product = Product::factory()->create(['stock' => 10]);
 
-        app(CreateOrder::class)->handle($this->user, [
-            ['product_id' => $product->id, 'quantity' => 3],
-            ['product_id' => $product->id, 'quantity' => 2],
+        $this->handle([
+            new OrderItem($product->id, 3),
+            new OrderItem($product->id, 2),
         ]);
 
         $this->assertSame(5, $product->fresh()->stock);
@@ -105,13 +100,10 @@ class CreateOrderTest extends TestCase
         $inactive = Product::factory()->create(['stock' => 10, 'status' => 'inactive']);
 
         try {
-            app(CreateOrder::class)->handle($this->user, [
-                ['product_id' => $ok->id, 'quantity' => 1],
-                ['product_id' => $inactive->id, 'quantity' => 1],
-            ]);
+            $this->createOrder([$ok->id => 1, $inactive->id => 1]);
             $this->fail('An inactive product should abort the order.');
-        } catch (ValidationException $e) {
-            $this->assertSame(["products.{$inactive->id}"], array_keys($e->errors()));
+        } catch (ProductsUnavailable $e) {
+            $this->assertSame([$inactive->id], array_keys($e->reasons));
         }
 
         $this->assertSame(10, $ok->fresh()->stock);
@@ -124,13 +116,10 @@ class CreateOrderTest extends TestCase
         $short = Product::factory()->create(['stock' => 2]);
 
         try {
-            app(CreateOrder::class)->handle($this->user, [
-                ['product_id' => $ok->id, 'quantity' => 1],
-                ['product_id' => $short->id, 'quantity' => 3],
-            ]);
+            $this->createOrder([$ok->id => 1, $short->id => 3]);
             $this->fail('Insufficient stock should abort the order.');
-        } catch (ValidationException $e) {
-            $this->assertSame(["products.{$short->id}"], array_keys($e->errors()));
+        } catch (ProductsUnavailable $e) {
+            $this->assertSame([$short->id], array_keys($e->reasons));
         }
 
         $this->assertSame(10, $ok->fresh()->stock);
@@ -145,7 +134,7 @@ class CreateOrderTest extends TestCase
 
         $this->postJson('/api/orders', ['products' => [['product_id' => $product->id, 'quantity' => 2]]])
             ->assertUnprocessable()
-            ->assertJsonValidationErrors("products.{$product->id}");
+            ->assertJsonValidationErrors(["products.{$product->id}" => "Product {$product->name} does not have enough stock."]);
     }
 
     public function test_the_endpoint_creates_an_order(): void
@@ -160,10 +149,10 @@ class CreateOrderTest extends TestCase
             ->assertJsonPath('data.total', '39.98')
             ->assertJsonPath('data.products.0.product_id', $product->id)
             ->assertJsonPath('data.products.0.name', 'blue widget')
+            ->assertJsonPath('data.products.0.price', '19.99')
             ->assertJsonPath('data.products.0.quantity', 2);
 
-        $this->assertTrue(Order::first()->user->is($this->user));
-        $this->assertTrue($this->user->orders->contains(Order::first()));
+        $this->assertDatabaseHas('orders', ['user_id' => $this->user->id, 'number' => 1]);
     }
 
     public function test_the_endpoint_requires_authentication(): void
@@ -198,5 +187,33 @@ class CreateOrderTest extends TestCase
             'missing quantity' => [fn (Product $p) => ['products' => [['product_id' => $p->id]]], 'products.0.quantity'],
             'repeated product' => [fn (Product $p) => ['products' => [['product_id' => $p->id, 'quantity' => 1], ['product_id' => $p->id, 'quantity' => 1]]], 'products.0.product_id'],
         ];
+    }
+
+    /**
+     * @param  array<string, int>  $quantities  keyed by product id
+     */
+    private function createOrder(array $quantities): OrderData
+    {
+        return $this->handle(array_map(
+            fn (string $id, int $quantity) => new OrderItem($id, $quantity),
+            array_keys($quantities),
+            $quantities,
+        ));
+    }
+
+    /**
+     * @param  list<OrderItem>  $items
+     */
+    private function handle(array $items): OrderData
+    {
+        return app(CreateOrder::class)->handle(new CreateOrderCommand($this->user->id, $items));
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function lineQuantities(OrderData $order): array
+    {
+        return collect($order->lines)->mapWithKeys(fn (OrderLineData $line) => [$line->productId => $line->quantity])->all();
     }
 }

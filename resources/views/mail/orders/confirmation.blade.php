@@ -6,8 +6,8 @@ Your order **#{{ $order->number }}** has been received.
 <x-mail::table>
 | Product | Quantity | Price |
 | :------ | -------: | ----: |
-@foreach ($order->products as $product)
-| {{ $product->name }} | {{ $product->pivot->quantity }} | {{ $product->price }} |
+@foreach ($order->lines as $line)
+| {{ $line->productName }} | {{ $line->quantity }} | {{ $line->unitPrice }} |
 @endforeach
 </x-mail::table>
 

@@ -48,6 +48,38 @@ Boost replaces these bootstrap instructions with guidelines tailored to the appl
 
 # Project notes
 
+## Architecture (hexagonal, by bounded context)
+
+Business code lives in `src/` (namespace `Src\`, PSR-4), one directory per bounded context;
+`app/` only holds the framework providers.
+
+- `Shared`: kernel used by every context. `Domain` (`AggregateRoot`, `Money`, `DomainException`),
+  `Application` ports (`EventBus`, `TransactionManager`), `Infrastructure` (their Laravel adapters
+  and `SharedServiceProvider`).
+- `Ordering` (full structure): `Domain` (entities `Order`/`OrderLine`/`Product`, domain service
+  `StockReservation`, `OrderCreated` event, repository interfaces, domain exceptions),
+  `Application` (use cases `CreateOrder` and `SendOrderConfirmation` with command/DTO in and
+  `OrderData` out, plus ports `CustomerDirectory` and `OrderConfirmationMailer`),
+  `Infrastructure` (Eloquent models `*Model` + repositories, controller/FormRequest/Resource,
+  queued listener, mail, `OrderingServiceProvider`).
+- `Catalog` (categories, products, search) and `Identity` (users, auth): simple CRUD, so they are
+  pragmatic: Eloquent is used directly from `Infrastructure`, with no use cases or repositories.
+  `Catalog\Domain` only holds the `ProductStatus` enum.
+
+Rules:
+- Dependencies point inward: Infrastructure → Application → Domain. `Domain` and `Application`
+  are plain PHP (no `Illuminate\`/`Laravel\` imports); `tests/Unit/ArchitectureTest.php` enforces it.
+- Interfaces are bound in the context's service provider (`$singletons`), registered in
+  `bootstrap/providers.php`. Listeners for domain events are registered there with `Event::listen`
+  (there is no auto-discovery outside `app/`).
+- Domain exceptions become HTTP errors via `Exceptions::map` (see `OrderingExceptions`, called from
+  `bootstrap/app.php`); domain code never throws `ValidationException` or HTTP exceptions.
+- Contexts don't import each other's classes. When one needs another's data it reads the table
+  through its own adapter (e.g. Ordering's `ProductModel` on `products`, `DatabaseCustomerDirectory`
+  on `users`).
+- Eloquent models outside `app/Models` declare their factory with `#[UseFactory(...)]`.
+- Controllers are thin: FormRequest (with `toCommand()` where there is a use case) → use case → Resource.
+
 ## Loading large product volumes (1M+ rows) for performance tests
 
 The committed seeders (`CategorySeeder`, `ProductSeeder`) are factory-based and sized for normal
@@ -82,7 +114,7 @@ for a large data set, do NOT change the seeders permanently; load it with raw SQ
 
 7. **Reindex Meilisearch** (raw SQL bypasses Scout events; product search reads from Meilisearch):
    `sail artisan scout:sync-index-settings` then
-   `sail exec -e SCOUT_QUEUE=false laravel.test php artisan scout:import "App\Models\Product"`
+   `sail exec -e SCOUT_QUEUE=false laravel.test php artisan scout:import "Src\Catalog\Infrastructure\Persistence\Product"`
    (1M docs: ~1-2 min; `SCOUT_QUEUE=false` avoids flooding the database queue). Run `scout:flush` first after `migrate:fresh`.
    The category listing is cached in Redis with a TTL only (no invalidation on change): run
    `sail artisan cache:clear redis` after `migrate:fresh` or bulk changes to categories.

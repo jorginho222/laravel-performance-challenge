@@ -1,10 +1,10 @@
 <?php
 
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\CategoryController;
-use App\Http\Controllers\Api\OrderController;
-use App\Http\Controllers\Api\ProductController;
 use Illuminate\Support\Facades\Route;
+use Src\Catalog\Infrastructure\Http\Controllers\CategoryController;
+use Src\Catalog\Infrastructure\Http\Controllers\ProductController;
+use Src\Identity\Infrastructure\Http\Controllers\AuthController;
+use Src\Ordering\Infrastructure\Http\Controllers\OrderController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');

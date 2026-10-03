@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use App\Models\Category;
-use App\Models\Product;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
+use Src\Catalog\Infrastructure\Persistence\Category;
+use Src\Catalog\Infrastructure\Persistence\Product;
 
 class ProductSeeder extends Seeder
 {
