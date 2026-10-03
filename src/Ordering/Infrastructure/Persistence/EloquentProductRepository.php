@@ -10,11 +10,11 @@ class EloquentProductRepository implements ProductRepository
 {
     public function lockByIds(array $ids): array
     {
-        return ProductModel::whereIn('id', $ids)
+        return OrderableProductModel::whereIn('id', $ids)
             ->orderBy('id')
             ->lockForUpdate()
             ->get()
-            ->map(fn (ProductModel $model) => new Product(
+            ->map(fn (OrderableProductModel $model) => new Product(
                 $model->id,
                 $model->name,
                 Money::fromDecimal($model->price),
@@ -26,6 +26,6 @@ class EloquentProductRepository implements ProductRepository
 
     public function save(Product $product): void
     {
-        ProductModel::whereKey($product->id)->update(['stock' => $product->stock()]);
+        OrderableProductModel::whereKey($product->id)->update(['stock' => $product->stock()]);
     }
 }

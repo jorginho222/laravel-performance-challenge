@@ -5,10 +5,10 @@ namespace Tests\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\DataProvider;
-use Src\Catalog\Infrastructure\Persistence\Product;
+use Src\Catalog\Infrastructure\Persistence\ProductModel;
 use Src\Identity\Infrastructure\Persistence\User;
 use Src\Ordering\Application\CreateOrder\CreateOrder;
-use Src\Ordering\Application\CreateOrder\CreateOrderCommand;
+use Src\Ordering\Application\CreateOrder\CreateOrderDto;
 use Src\Ordering\Application\CreateOrder\OrderItem;
 use Src\Ordering\Application\OrderData;
 use Src\Ordering\Application\OrderLineData;
@@ -31,8 +31,8 @@ class CreateOrderTest extends TestCase
 
     public function test_it_creates_an_order_with_a_calculated_total_and_its_lines(): void
     {
-        $a = Product::factory()->create(['price' => '10.10', 'stock' => 10]);
-        $b = Product::factory()->create(['price' => '0.35', 'stock' => 10]);
+        $a = ProductModel::factory()->create(['price' => '10.10', 'stock' => 10]);
+        $b = ProductModel::factory()->create(['price' => '0.35', 'stock' => 10]);
 
         $order = $this->createOrder([$a->id => 3, $b->id => 2]);
 
@@ -46,7 +46,7 @@ class CreateOrderTest extends TestCase
 
     public function test_order_numbers_are_correlative(): void
     {
-        $product = Product::factory()->create(['price' => 1, 'stock' => 10]);
+        $product = ProductModel::factory()->create(['price' => 1, 'stock' => 10]);
 
         $numbers = collect(range(1, 3))->map(fn () => $this->createOrder([$product->id => 1])->number);
 
@@ -55,7 +55,7 @@ class CreateOrderTest extends TestCase
 
     public function test_a_failed_order_does_not_consume_a_number(): void
     {
-        $product = Product::factory()->create(['price' => 1, 'stock' => 10]);
+        $product = ProductModel::factory()->create(['price' => 1, 'stock' => 10]);
 
         $this->createOrder([$product->id => 1]);
 
@@ -71,7 +71,7 @@ class CreateOrderTest extends TestCase
 
     public function test_repeated_products_are_merged_into_one_line(): void
     {
-        $product = Product::factory()->create(['price' => '2.50', 'stock' => 10]);
+        $product = ProductModel::factory()->create(['price' => '2.50', 'stock' => 10]);
 
         $order = $this->handle([
             new OrderItem($product->id, 1),
@@ -84,7 +84,7 @@ class CreateOrderTest extends TestCase
 
     public function test_it_discounts_the_stock_of_the_ordered_products(): void
     {
-        $product = Product::factory()->create(['stock' => 10]);
+        $product = ProductModel::factory()->create(['stock' => 10]);
 
         $this->handle([
             new OrderItem($product->id, 3),
@@ -96,8 +96,8 @@ class CreateOrderTest extends TestCase
 
     public function test_it_rejects_inactive_products_and_changes_nothing(): void
     {
-        $ok = Product::factory()->create(['stock' => 10]);
-        $inactive = Product::factory()->create(['stock' => 10, 'status' => 'inactive']);
+        $ok = ProductModel::factory()->create(['stock' => 10]);
+        $inactive = ProductModel::factory()->create(['stock' => 10, 'status' => 'inactive']);
 
         try {
             $this->createOrder([$ok->id => 1, $inactive->id => 1]);
@@ -112,8 +112,8 @@ class CreateOrderTest extends TestCase
 
     public function test_it_rejects_products_without_enough_stock_and_changes_nothing(): void
     {
-        $ok = Product::factory()->create(['stock' => 10]);
-        $short = Product::factory()->create(['stock' => 2]);
+        $ok = ProductModel::factory()->create(['stock' => 10]);
+        $short = ProductModel::factory()->create(['stock' => 2]);
 
         try {
             $this->createOrder([$ok->id => 1, $short->id => 3]);
@@ -130,7 +130,7 @@ class CreateOrderTest extends TestCase
     public function test_the_endpoint_responds_unprocessable_when_stock_is_insufficient(): void
     {
         Sanctum::actingAs($this->user);
-        $product = Product::factory()->create(['stock' => 1]);
+        $product = ProductModel::factory()->create(['stock' => 1]);
 
         $this->postJson('/api/orders', ['products' => [['product_id' => $product->id, 'quantity' => 2]]])
             ->assertUnprocessable()
@@ -140,7 +140,7 @@ class CreateOrderTest extends TestCase
     public function test_the_endpoint_creates_an_order(): void
     {
         Sanctum::actingAs($this->user);
-        $product = Product::factory()->create(['name' => 'blue widget', 'price' => '19.99', 'stock' => 10]);
+        $product = ProductModel::factory()->create(['name' => 'blue widget', 'price' => '19.99', 'stock' => 10]);
 
         $this->postJson('/api/orders', ['products' => [['product_id' => $product->id, 'quantity' => 2]]])
             ->assertCreated()
@@ -164,7 +164,7 @@ class CreateOrderTest extends TestCase
     public function test_the_endpoint_validates_the_payload(callable $payload, string $errorKey): void
     {
         Sanctum::actingAs($this->user);
-        $product = Product::factory()->create();
+        $product = ProductModel::factory()->create();
 
         $this->postJson('/api/orders', $payload($product))
             ->assertUnprocessable()
@@ -183,9 +183,9 @@ class CreateOrderTest extends TestCase
             'empty products' => [fn () => ['products' => []], 'products'],
             'unknown product' => [fn () => ['products' => [['product_id' => '01a0edee-18ce-732e-b88d-ce31ddbe92d5', 'quantity' => 1]]], 'products.0.product_id'],
             'not a uuid' => [fn () => ['products' => [['product_id' => 'abc', 'quantity' => 1]]], 'products.0.product_id'],
-            'zero quantity' => [fn (Product $p) => ['products' => [['product_id' => $p->id, 'quantity' => 0]]], 'products.0.quantity'],
-            'missing quantity' => [fn (Product $p) => ['products' => [['product_id' => $p->id]]], 'products.0.quantity'],
-            'repeated product' => [fn (Product $p) => ['products' => [['product_id' => $p->id, 'quantity' => 1], ['product_id' => $p->id, 'quantity' => 1]]], 'products.0.product_id'],
+            'zero quantity' => [fn (ProductModel $p) => ['products' => [['product_id' => $p->id, 'quantity' => 0]]], 'products.0.quantity'],
+            'missing quantity' => [fn (ProductModel $p) => ['products' => [['product_id' => $p->id]]], 'products.0.quantity'],
+            'repeated product' => [fn (ProductModel $p) => ['products' => [['product_id' => $p->id, 'quantity' => 1], ['product_id' => $p->id, 'quantity' => 1]]], 'products.0.product_id'],
         ];
     }
 
@@ -206,7 +206,7 @@ class CreateOrderTest extends TestCase
      */
     private function handle(array $items): OrderData
     {
-        return app(CreateOrder::class)->handle(new CreateOrderCommand($this->user->id, $items));
+        return app(CreateOrder::class)->handle(new CreateOrderDto($this->user->id, $items));
     }
 
     /**

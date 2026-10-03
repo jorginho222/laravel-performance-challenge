@@ -58,7 +58,7 @@ class EloquentOrderRepository implements OrderRepository
             $model->id,
             $model->user_id,
             $model->number,
-            $model->products->map(fn (ProductModel $product) => new OrderLine(
+            $model->products->map(fn (OrderableProductModel $product) => new OrderLine(
                 $product->id,
                 $product->name,
                 Money::fromDecimal($product->price),

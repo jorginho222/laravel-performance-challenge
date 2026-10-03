@@ -18,14 +18,12 @@ use Src\Shared\Application\TransactionManager;
 final class CreateOrder
 {
     public function __construct(
-        private OrderRepository    $orderRepository,
-        private ProductRepository  $productRepository,
-        private StockReservation   $stockReservation,
+        private OrderRepository $orderRepository,
+        private ProductRepository $productRepository,
+        private StockReservation $stockReservation,
         private TransactionManager $transactionManager,
-        private EventBus           $eventBus,
-    )
-    {
-    }
+        private EventBus $eventBus,
+    ) {}
 
     /**
      * Create an order from product/quantity lines, reserving the products' stock, and announce
@@ -34,17 +32,17 @@ final class CreateOrder
      * @throws ProductNotFound when a product does not exist
      * @throws ProductsUnavailable when a product is not active or does not have enough stock
      */
-    public function handle(CreateOrderCommand $command): OrderData
+    public function handle(CreateOrderDto $dto): OrderData
     {
         $quantities = [];
-        foreach ($command->items as $item) {
+        foreach ($dto->items as $item) {
             $quantities[$item->productId] = ($quantities[$item->productId] ?? 0) + $item->quantity;
         }
 
-        $order = $this->transactionManager->run(function () use ($command, $quantities) {
+        $order = $this->transactionManager->run(function () use ($dto, $quantities) {
             $products = $this->productRepository->lockByIds(array_keys($quantities));
 
-            $missing = array_diff(array_keys($quantities), array_map(fn(Product $p) => $p->id, $products));
+            $missing = array_diff(array_keys($quantities), array_map(fn (Product $p) => $p->id, $products));
             if ($missing !== []) {
                 throw new ProductNotFound(array_values($missing));
             }
@@ -53,10 +51,10 @@ final class CreateOrder
 
             $order = Order::place(
                 $this->orderRepository->nextIdentity(),
-                $command->customerId,
+                $dto->customerId,
                 $this->orderRepository->nextNumber(),
-                array_map(fn(Product $p) => OrderLine::forProduct($p, $quantities[$p->id]), $products),
-                new DateTimeImmutable('@' . time()),
+                array_map(fn (Product $p) => OrderLine::forProduct($p, $quantities[$p->id]), $products),
+                new DateTimeImmutable('@'.time()),
             );
 
             foreach ($products as $product) {

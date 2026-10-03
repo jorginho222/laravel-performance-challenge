@@ -4,7 +4,7 @@ namespace Src\Catalog\Infrastructure\Search;
 
 use Illuminate\Contracts\Pagination\CursorPaginator;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Src\Catalog\Infrastructure\Persistence\Product;
+use Src\Catalog\Infrastructure\Persistence\ProductModel;
 
 class ProductSearch
 {
@@ -27,7 +27,7 @@ class ProductSearch
      */
     private function search(array $filters): LengthAwarePaginator
     {
-        return Product::search($filters['search'])
+        return ProductModel::search($filters['search'])
             ->when($filters['category_id'] ?? null, fn ($s, $v) => $s->where('category_id', $v))
             ->when($filters['status'] ?? null, fn ($s, $v) => $s->where('status', $v))
             ->query(fn ($q) => $q->with('category'))
@@ -39,7 +39,7 @@ class ProductSearch
      */
     private function list(array $filters): CursorPaginator
     {
-        return Product::with('category')
+        return ProductModel::with('category')
             ->when($filters['category_id'] ?? null, fn ($q, $v) => $q->where('category_id', $v))
             ->when($filters['status'] ?? null, fn ($q, $v) => $q->where('status', $v))
             ->orderBy('name')

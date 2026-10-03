@@ -10,10 +10,10 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
 use RuntimeException;
-use Src\Catalog\Infrastructure\Persistence\Product;
+use Src\Catalog\Infrastructure\Persistence\ProductModel;
 use Src\Identity\Infrastructure\Persistence\User;
 use Src\Ordering\Application\CreateOrder\CreateOrder;
-use Src\Ordering\Application\CreateOrder\CreateOrderCommand;
+use Src\Ordering\Application\CreateOrder\CreateOrderDto;
 use Src\Ordering\Application\CreateOrder\OrderItem;
 use Src\Ordering\Application\OrderData;
 use Src\Ordering\Domain\Events\OrderCreated;
@@ -32,7 +32,7 @@ class OrderConfirmationEmailTest extends TestCase
         Event::fake([OrderCreated::class]);
         $user = User::factory()->create();
         Sanctum::actingAs($user);
-        $product = Product::factory()->create(['stock' => 10]);
+        $product = ProductModel::factory()->create(['stock' => 10]);
 
         $response = $this->postJson('/api/orders', ['products' => [['product_id' => $product->id, 'quantity' => 1]]])
             ->assertCreated();
@@ -119,8 +119,8 @@ class OrderConfirmationEmailTest extends TestCase
 
     private function order(User $user): OrderData
     {
-        $product = Product::factory()->create(['name' => 'blue widget', 'price' => '19.99', 'stock' => 10]);
+        $product = ProductModel::factory()->create(['name' => 'blue widget', 'price' => '19.99', 'stock' => 10]);
 
-        return app(CreateOrder::class)->handle(new CreateOrderCommand($user->id, [new OrderItem($product->id, 2)]));
+        return app(CreateOrder::class)->handle(new CreateOrderDto($user->id, [new OrderItem($product->id, 2)]));
     }
 }

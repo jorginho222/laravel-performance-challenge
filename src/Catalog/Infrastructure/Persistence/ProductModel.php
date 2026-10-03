@@ -4,6 +4,7 @@ namespace Src\Catalog\Infrastructure\Persistence;
 
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
+use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,12 +12,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
 use Laravel\Scout\Searchable;
 use Src\Catalog\Domain\ProductStatus;
+use Src\Catalog\Infrastructure\Policies\ProductPolicy;
 
 #[UseFactory(ProductFactory::class)]
-class Product extends Model
+#[UsePolicy(ProductPolicy::class)]
+class ProductModel extends Model
 {
     /** @use HasFactory<ProductFactory> */
     use HasFactory, HasUuids, Searchable;
+
+    protected $table = 'products';
 
     protected $fillable = ['name', 'category_id', 'price', 'stock', 'status'];
 
@@ -31,7 +36,7 @@ class Product extends Model
 
     public function category(): BelongsTo
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(CategoryModel::class);
     }
 
     /**

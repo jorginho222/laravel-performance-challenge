@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
  * only reads what an order needs and writes the stock. It is not Searchable, so stock
  * changes do not reindex the product in Meilisearch (stock is not indexed).
  */
-class ProductModel extends Model
+class OrderableProductModel extends Model
 {
     protected $table = 'products';
 

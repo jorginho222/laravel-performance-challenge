@@ -2,7 +2,7 @@
 
 namespace Src\Ordering\Application\CreateOrder;
 
-final readonly class CreateOrderCommand
+final readonly class CreateOrderDto
 {
     /**
      * @param  list<OrderItem>  $items

@@ -4,8 +4,8 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
-use Src\Catalog\Infrastructure\Persistence\Category;
-use Src\Catalog\Infrastructure\Persistence\Product;
+use Src\Catalog\Infrastructure\Persistence\CategoryModel;
+use Src\Catalog\Infrastructure\Persistence\ProductModel;
 
 class ProductSeeder extends Seeder
 {
@@ -15,7 +15,7 @@ class ProductSeeder extends Seeder
 
     public function run(): void
     {
-        $categoryIds = Category::pluck('id');
+        $categoryIds = CategoryModel::pluck('id');
 
         if ($categoryIds->isEmpty()) {
             $this->command?->warn('No categories found; run CategorySeeder first.');
@@ -29,7 +29,7 @@ class ProductSeeder extends Seeder
             $rows = [];
 
             for ($i = 0; $i < min(self::CHUNK, self::COUNT - $created); $i++) {
-                $rows[] = Product::factory()->raw([
+                $rows[] = ProductModel::factory()->raw([
                     'id' => (string) Str::uuid7(),
                     'category_id' => $categoryIds->random(),
                     'status' => fake()->boolean(90) ? 'active' : 'inactive',
@@ -38,7 +38,7 @@ class ProductSeeder extends Seeder
                 ]);
             }
 
-            Product::insert($rows);
+            ProductModel::insert($rows);
         }
     }
 }

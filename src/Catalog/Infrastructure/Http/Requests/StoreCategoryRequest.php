@@ -4,12 +4,13 @@ namespace Src\Catalog\Infrastructure\Http\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Src\Catalog\Infrastructure\Persistence\CategoryModel;
 
 class StoreCategoryRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return $this->user()->can('create', CategoryModel::class);
     }
 
     /**

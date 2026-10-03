@@ -6,12 +6,13 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Src\Catalog\Domain\ProductStatus;
+use Src\Catalog\Infrastructure\Persistence\ProductModel;
 
 class StoreProductRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return $this->user()->can('create', ProductModel::class);
     }
 
     /**

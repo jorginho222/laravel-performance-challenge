@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
-use Src\Catalog\Infrastructure\Persistence\Category;
+use Src\Catalog\Infrastructure\Persistence\CategoryModel;
 use Src\Identity\Infrastructure\Persistence\User;
 use Tests\TestCase;
 
@@ -21,8 +21,8 @@ class CategoryCacheTest extends TestCase
 
     public function test_listing_returns_categories_ordered_by_name_with_pagination_meta(): void
     {
-        Category::factory()->create(['name' => 'b category']);
-        Category::factory()->create(['name' => 'a category']);
+        CategoryModel::factory()->create(['name' => 'b category']);
+        CategoryModel::factory()->create(['name' => 'a category']);
 
         $this->getJson('/api/categories')
             ->assertOk()
@@ -34,12 +34,12 @@ class CategoryCacheTest extends TestCase
 
     public function test_listing_is_served_from_cache_until_the_ttl_expires(): void
     {
-        Category::factory()->create(['name' => 'a category']);
+        CategoryModel::factory()->create(['name' => 'a category']);
 
         $this->getJson('/api/categories')->assertJsonCount(1, 'data');
 
         // Changes are not invalidated: the cached listing is still served.
-        Category::factory()->create(['name' => 'b category']);
+        CategoryModel::factory()->create(['name' => 'b category']);
         $this->getJson('/api/categories')->assertJsonCount(1, 'data');
 
         $this->travel(config('cache.categories.ttl') + 1)->seconds();
@@ -49,7 +49,7 @@ class CategoryCacheTest extends TestCase
 
     public function test_each_page_is_cached_separately(): void
     {
-        Category::factory()->count(20)->sequence(fn ($s) => ['name' => sprintf('category %02d', $s->index)])->create();
+        CategoryModel::factory()->count(20)->sequence(fn ($s) => ['name' => sprintf('category %02d', $s->index)])->create();
 
         $this->getJson('/api/categories')->assertJsonCount(15, 'data')->assertJsonPath('meta.current_page', 1);
         $this->getJson('/api/categories?page=2')->assertJsonCount(5, 'data')->assertJsonPath('meta.current_page', 2);

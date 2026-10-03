@@ -3,10 +3,10 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Src\Catalog\Infrastructure\Persistence\Category;
+use Src\Catalog\Infrastructure\Persistence\CategoryModel;
 
 /**
- * @extends Factory<Category>
+ * @extends Factory<CategoryModel>
  */
 class CategoryFactory extends Factory
 {

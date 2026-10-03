@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
-use Src\Catalog\Infrastructure\Persistence\Category;
-use Src\Catalog\Infrastructure\Persistence\Product;
+use Src\Catalog\Infrastructure\Persistence\CategoryModel;
+use Src\Catalog\Infrastructure\Persistence\ProductModel;
 use Src\Identity\Infrastructure\Persistence\User;
 use Tests\TestCase;
 
@@ -22,8 +22,8 @@ class ProductSearchTest extends TestCase
 
     public function test_search_returns_only_matching_products(): void
     {
-        Product::factory()->create(['name' => 'blue widget']);
-        Product::factory()->create(['name' => 'red gadget']);
+        ProductModel::factory()->create(['name' => 'blue widget']);
+        ProductModel::factory()->create(['name' => 'red gadget']);
 
         $this->getJson('/api/products?search=widget')
             ->assertOk()
@@ -33,12 +33,12 @@ class ProductSearchTest extends TestCase
 
     public function test_search_can_be_combined_with_category_and_status_filters(): void
     {
-        $category = Category::factory()->create();
-        $other = Category::factory()->create();
+        $category = CategoryModel::factory()->create();
+        $other = CategoryModel::factory()->create();
 
-        $match = Product::factory()->for($category)->create(['name' => 'blue widget', 'status' => 'active']);
-        Product::factory()->for($other)->create(['name' => 'green widget', 'status' => 'active']);
-        Product::factory()->for($category)->create(['name' => 'red widget', 'status' => 'inactive']);
+        $match = ProductModel::factory()->for($category, 'category')->create(['name' => 'blue widget', 'status' => 'active']);
+        ProductModel::factory()->for($other, 'category')->create(['name' => 'green widget', 'status' => 'active']);
+        ProductModel::factory()->for($category, 'category')->create(['name' => 'red widget', 'status' => 'inactive']);
 
         $this->getJson("/api/products?search=widget&category_id={$category->id}&status=active")
             ->assertOk()
@@ -48,7 +48,7 @@ class ProductSearchTest extends TestCase
 
     public function test_search_results_include_the_category(): void
     {
-        $product = Product::factory()->create(['name' => 'blue widget']);
+        $product = ProductModel::factory()->create(['name' => 'blue widget']);
 
         $this->getJson('/api/products?search=widget')
             ->assertOk()
@@ -57,8 +57,8 @@ class ProductSearchTest extends TestCase
 
     public function test_listing_without_search_still_uses_the_database(): void
     {
-        Product::factory()->create(['name' => 'b product']);
-        Product::factory()->create(['name' => 'a product']);
+        ProductModel::factory()->create(['name' => 'b product']);
+        ProductModel::factory()->create(['name' => 'a product']);
 
         $this->getJson('/api/products')
             ->assertOk()
@@ -68,9 +68,11 @@ class ProductSearchTest extends TestCase
 
     public function test_new_products_are_searchable(): void
     {
+        Sanctum::actingAs(User::factory()->admin()->create());
+
         $this->postJson('/api/products', [
             'name' => 'fresh widget',
-            'category_id' => Category::factory()->create()->id,
+            'category_id' => CategoryModel::factory()->create()->id,
             'price' => 9.99,
             'stock' => 3,
             'status' => 'active',
@@ -83,7 +85,7 @@ class ProductSearchTest extends TestCase
 
     public function test_listing_without_search_is_cursor_paginated(): void
     {
-        Product::factory()->count(20)->sequence(fn ($s) => ['name' => sprintf('product %02d', $s->index)])->create();
+        ProductModel::factory()->count(20)->sequence(fn ($s) => ['name' => sprintf('product %02d', $s->index)])->create();
 
         $first = $this->getJson('/api/products')
             ->assertOk()
@@ -103,7 +105,7 @@ class ProductSearchTest extends TestCase
 
     public function test_cursor_pagination_does_not_skip_products_sharing_the_same_name(): void
     {
-        Product::factory()->count(20)->create(['name' => 'same name']);
+        ProductModel::factory()->count(20)->create(['name' => 'same name']);
 
         $first = $this->getJson('/api/products')->assertOk();
         $second = $this->getJson('/api/products?cursor='.$first->json('meta.next_cursor'))->assertOk();

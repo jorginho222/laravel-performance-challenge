@@ -3,11 +3,11 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Src\Catalog\Infrastructure\Persistence\Category;
-use Src\Catalog\Infrastructure\Persistence\Product;
+use Src\Catalog\Infrastructure\Persistence\CategoryModel;
+use Src\Catalog\Infrastructure\Persistence\ProductModel;
 
 /**
- * @extends Factory<Product>
+ * @extends Factory<ProductModel>
  */
 class ProductFactory extends Factory
 {
@@ -15,7 +15,7 @@ class ProductFactory extends Factory
     {
         return [
             'name' => fake()->words(3, true),
-            'category_id' => Category::factory(),
+            'category_id' => CategoryModel::factory(),
             'price' => fake()->randomFloat(2, 1, 500),
             'stock' => fake()->numberBetween(0, 100),
             'status' => 'active',

@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Src\Catalog\Infrastructure\Persistence\Category;
+use Src\Catalog\Infrastructure\Persistence\CategoryModel;
 
 class CategorySeeder extends Seeder
 {
@@ -11,6 +11,6 @@ class CategorySeeder extends Seeder
 
     public function run(): void
     {
-        Category::factory(self::COUNT)->create();
+        CategoryModel::factory(self::COUNT)->create();
     }
 }

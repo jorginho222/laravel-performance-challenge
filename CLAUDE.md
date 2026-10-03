@@ -58,7 +58,7 @@ Business code lives in `src/` (namespace `Src\`, PSR-4), one directory per bound
   and `SharedServiceProvider`).
 - `Ordering` (full structure): `Domain` (entities `Order`/`OrderLine`/`Product`, domain service
   `StockReservation`, `OrderCreated` event, repository interfaces, domain exceptions),
-  `Application` (use cases `CreateOrder` and `SendOrderConfirmation` with command/DTO in and
+  `Application` (use cases `CreateOrder` and `SendOrderConfirmation` with a DTO in and
   `OrderData` out, plus ports `CustomerDirectory` and `OrderConfirmationMailer`),
   `Infrastructure` (Eloquent models `*Model` + repositories, controller/FormRequest/Resource,
   queued listener, mail, `OrderingServiceProvider`).
@@ -75,10 +75,22 @@ Rules:
 - Domain exceptions become HTTP errors via `Exceptions::map` (see `OrderingExceptions`, called from
   `bootstrap/app.php`); domain code never throws `ValidationException` or HTTP exceptions.
 - Contexts don't import each other's classes. When one needs another's data it reads the table
-  through its own adapter (e.g. Ordering's `ProductModel` on `products`, `DatabaseCustomerDirectory`
+  through its own adapter (e.g. Ordering's `OrderableProductModel` on `products`, `DatabaseCustomerDirectory`
   on `users`).
 - Eloquent models outside `app/Models` declare their factory with `#[UseFactory(...)]`.
-- Controllers are thin: FormRequest (with `toCommand()` where there is a use case) → use case → Resource.
+- Controllers are thin: FormRequest (with `toDto()` where there is a use case) → use case → Resource.
+
+Authorization:
+- Roles (`Src\Identity\Domain\UserRole`: `admin`, `customer`) live in `users.role`, default `customer`;
+  it is not fillable, so registration cannot choose it. Make an admin with `sail artisan user:promote <email>` (or the seeder:
+  `admin@example.com` / `password`; `test@example.com` is a customer).
+- Identity defines the gates (`IdentityServiceProvider`): `manage-catalog` (admins) and
+  `place-orders` (customers only, admins get 403). Other contexts check abilities by name and
+  never import `User`.
+- Catalog policies (`#[UsePolicy]` on the models) allow browsing to every user and delegate
+  create/update/delete to `manage-catalog`. They are enforced in the FormRequests' `authorize()`
+  (store/update, so 403 comes before validation) and with `Gate::authorize` in the controllers
+  (index/show/destroy). Ordering checks `place-orders` in `StoreOrderRequest::authorize()`.
 
 ## Loading large product volumes (1M+ rows) for performance tests
 
@@ -114,7 +126,7 @@ for a large data set, do NOT change the seeders permanently; load it with raw SQ
 
 7. **Reindex Meilisearch** (raw SQL bypasses Scout events; product search reads from Meilisearch):
    `sail artisan scout:sync-index-settings` then
-   `sail exec -e SCOUT_QUEUE=false laravel.test php artisan scout:import "Src\Catalog\Infrastructure\Persistence\Product"`
+   `sail exec -e SCOUT_QUEUE=false laravel.test php artisan scout:import "Src\Catalog\Infrastructure\Persistence\ProductModel"`
    (1M docs: ~1-2 min; `SCOUT_QUEUE=false` avoids flooding the database queue). Run `scout:flush` first after `migrate:fresh`.
    The category listing is cached in Redis with a TTL only (no invalidation on change): run
    `sail artisan cache:clear redis` after `migrate:fresh` or bulk changes to categories.
@@ -133,8 +145,12 @@ Gotchas:
 
 ## Dev services (Sail)
 
-- `queue` container: `queue:listen` processes the Redis queue automatically (order confirmation
-  emails, Scout index updates). Logs: `docker logs <project>-queue-1`.
+- `queue` container: Horizon (`horizon:listen`) processes the Redis queue automatically (order
+  confirmation emails, Scout index updates) and restarts its workers when files in `config/horizon.php`
+  `watch` change (needs the `chokidar` npm dev dependency; `src` is in the list). Dashboard:
+  http://localhost/horizon (open locally; elsewhere the `viewHorizon` gate allows admins only).
+  Worker settings live in `config/horizon.php` (`defaults`/`environments`), not in the command.
+  Logs: `docker logs <project>-queue-1`. After editing `compose.yaml`: `sail up -d queue`.
 - Failed jobs are stored in the `failed_jobs` table (Laravel has no Redis failed-job driver):
   `sail artisan queue:failed`, `sail artisan queue:retry all`.
 - Mailpit catches outgoing mail: inbox at http://localhost:8025 (SMTP `mailpit:1025`).

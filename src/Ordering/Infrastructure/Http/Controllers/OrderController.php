@@ -11,7 +11,7 @@ class OrderController
 {
     public function store(StoreOrderRequest $request, CreateOrder $createOrder): JsonResponse
     {
-        $order = $createOrder->handle($request->toCommand());
+        $order = $createOrder->handle($request->toDto());
 
         return (new OrderResource($order))->response()->setStatusCode(201);
     }

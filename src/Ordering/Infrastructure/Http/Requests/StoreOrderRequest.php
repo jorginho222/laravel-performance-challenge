@@ -4,14 +4,14 @@ namespace Src\Ordering\Infrastructure\Http\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Src\Ordering\Application\CreateOrder\CreateOrderCommand;
+use Src\Ordering\Application\CreateOrder\CreateOrderDto;
 use Src\Ordering\Application\CreateOrder\OrderItem;
 
 class StoreOrderRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return $this->user()->can('place-orders');
     }
 
     /**
@@ -26,9 +26,9 @@ class StoreOrderRequest extends FormRequest
         ];
     }
 
-    public function toCommand(): CreateOrderCommand
+    public function toDto(): CreateOrderDto
     {
-        return new CreateOrderCommand(
+        return new CreateOrderDto(
             $this->user()->id,
             array_map(
                 fn (array $item) => new OrderItem($item['product_id'], (int) $item['quantity']),

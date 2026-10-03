@@ -28,8 +28,9 @@ services:
             - mailpit
     queue:
         image: 'sail-8.5/app'
-        # queue:listen reloads the code for every job, so no restart is needed while developing.
-        command: php artisan queue:listen --timeout=90
+        # Horizon runs the workers (dashboard at /horizon); horizon:listen restarts them when files
+        # change, so no restart is needed while developing.
+        command: php artisan horizon:listen
         restart: unless-stopped
         extra_hosts:
             - 'host.docker.internal:host-gateway'
