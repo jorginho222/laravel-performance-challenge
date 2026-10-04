@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('orders', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignId('user_id')->constrained()->restrictOnDelete();
+            $table->foreignUuid('user_id')->constrained()->restrictOnDelete();
             $table->unsignedBigInteger('number')->unique();
             $table->decimal('total', 12, 2)->default(0);
             $table->timestamps();

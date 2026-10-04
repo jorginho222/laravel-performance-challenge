@@ -1,7 +1,7 @@
 export type Role = 'admin' | 'customer';
 
 export interface User {
-    id: number;
+    id: string;
     name: string;
     email: string;
     role: Role;
@@ -93,7 +93,7 @@ export interface OrderLine {
 
 export interface Order {
     id: string;
-    user_id: number;
+    user_id: string;
     number: number;
     /** Decimal string, calculated when the order was placed. */
     total: string;

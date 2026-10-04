@@ -15,7 +15,7 @@ final class Order extends AggregateRoot
      */
     private function __construct(
         public readonly string            $id,
-        public readonly int               $customerId,
+        public readonly string            $customerId,
         public readonly int               $number,
         public readonly array             $lines,
         public readonly Money             $total,
@@ -30,7 +30,7 @@ final class Order extends AggregateRoot
      *
      * @param list<OrderLine> $lines
      */
-    public static function place(string $id, int $customerId, int $number, array $lines, DateTimeImmutable $placedAt): self
+    public static function place(string $id, string $customerId, int $number, array $lines, DateTimeImmutable $placedAt): self
     {
         if ($lines === []) {
             throw new InvalidArgumentException('An order needs at least one line.');
@@ -49,7 +49,7 @@ final class Order extends AggregateRoot
      *
      * @param list<OrderLine> $lines
      */
-    public static function reconstitute(string $id, int $customerId, int $number, array $lines, Money $total, DateTimeImmutable $placedAt): self
+    public static function reconstitute(string $id, string $customerId, int $number, array $lines, Money $total, DateTimeImmutable $placedAt): self
     {
         return new self($id, $customerId, $number, $lines, $total, $placedAt);
     }

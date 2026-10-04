@@ -12,16 +12,18 @@ use Src\Ordering\Domain\OrderLine;
 final readonly class OrderData
 {
     /**
-     * @param  list<OrderLineData>  $lines
+     * @param list<OrderLineData> $lines
      */
     public function __construct(
-        public string $id,
-        public int $customerId,
-        public int $number,
-        public string $total,
-        public array $lines,
+        public string            $id,
+        public string            $customerId,
+        public int               $number,
+        public string            $total,
+        public array             $lines,
         public DateTimeImmutable $placedAt,
-    ) {}
+    )
+    {
+    }
 
     public static function fromOrder(Order $order): self
     {
@@ -30,7 +32,7 @@ final readonly class OrderData
             $order->customerId,
             $order->number,
             $order->total->toDecimal(),
-            array_map(fn (OrderLine $line) => new OrderLineData(
+            array_map(fn(OrderLine $line) => new OrderLineData(
                 $line->productId,
                 $line->productName,
                 $line->unitPrice->toDecimal(),

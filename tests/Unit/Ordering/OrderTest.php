@@ -32,7 +32,7 @@ class OrderTest extends TestCase
 
     public function test_a_reconstituted_order_records_no_events(): void
     {
-        $order = Order::reconstitute('order-1', 1, 1, [], Money::zero(), new DateTimeImmutable);
+        $order = Order::reconstitute('order-1', 'customer-1', 1, [], Money::zero(), new DateTimeImmutable);
 
         $this->assertSame([], $order->pullDomainEvents());
     }
@@ -56,6 +56,6 @@ class OrderTest extends TestCase
      */
     private function place(array $lines): Order
     {
-        return Order::place('order-1', 1, 1, $lines, new DateTimeImmutable);
+        return Order::place('order-1', 'customer-1', 1, $lines, new DateTimeImmutable);
     }
 }

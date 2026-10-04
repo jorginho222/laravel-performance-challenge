@@ -12,14 +12,14 @@ export interface CartLine {
     quantity: number;
 }
 
-const storageKey = (userId: number) => `cart:${userId}`;
+const storageKey = (userId: string) => `cart:${userId}`;
 
 /**
  * The shopping cart lives in the browser until it's placed as an order. It's kept per user
  * in localStorage, so it survives reloads and isn't shared with whoever signs in next.
  */
 export const useCartStore = defineStore('cart', () => {
-    const ownerId = ref<number | null>(null);
+    const ownerId = ref<string | null>(null);
     const lines = ref<CartLine[]>([]);
 
     const count = computed(() => lines.value.reduce((sum, line) => sum + line.quantity, 0));
@@ -65,7 +65,7 @@ export const useCartStore = defineStore('cart', () => {
     }
 
     /** Load the cart of the signed-in user (or empty it when nobody is signed in). */
-    function restore(userId: number | null): void {
+    function restore(userId: string | null): void {
         ownerId.value = userId;
         lines.value = userId === null ? [] : read(storageKey(userId));
     }

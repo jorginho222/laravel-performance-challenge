@@ -11,7 +11,7 @@ use Src\Ordering\Application\SendOrderConfirmation\CustomerDirectory;
  */
 class DatabaseCustomerDirectory implements CustomerDirectory
 {
-    public function emailOf(int $customerId): ?string
+    public function emailOf(string $customerId): ?string
     {
         return DB::table('users')->where('id', $customerId)->value('email');
     }

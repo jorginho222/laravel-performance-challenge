@@ -18,7 +18,6 @@ class OrderModel extends Model
     protected function casts(): array
     {
         return [
-            'user_id' => 'integer',
             'number' => 'integer',
             'total' => 'decimal:2',
         ];

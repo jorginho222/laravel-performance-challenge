@@ -8,7 +8,7 @@ final readonly class CreateOrderDto
      * @param  list<OrderItem>  $items
      */
     public function __construct(
-        public int $customerId,
+        public string $customerId,
         public array $items,
     ) {}
 }
