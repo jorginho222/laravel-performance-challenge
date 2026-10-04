@@ -65,11 +65,7 @@ services:
         networks:
             - sail
         healthcheck:
-            test:
-                - CMD
-                - mysqladmin
-                - ping
-                - '-p${DB_PASSWORD}'
+            test: 'mysqladmin ping -p${DB_PASSWORD}'
             retries: 3
             timeout: 5s
     redis:
@@ -81,10 +77,7 @@ services:
         networks:
             - sail
         healthcheck:
-            test:
-                - CMD
-                - redis-cli
-                - ping
+            test: 'redis-cli ping'
             retries: 3
             timeout: 5s
     mailpit:
@@ -105,12 +98,7 @@ services:
         networks:
             - sail
         healthcheck:
-            test:
-                - CMD
-                - wget
-                - '--no-verbose'
-                - '--spider'
-                - 'http://127.0.0.1:7700/health'
+            test: 'wget --no-verbose --spider http://127.0.0.1:7700/health'
             retries: 3
             timeout: 5s
 networks:
