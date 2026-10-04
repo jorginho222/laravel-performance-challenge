@@ -4,7 +4,6 @@ namespace Src\Ordering\Infrastructure\Persistence;
 
 use DateTimeImmutable;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Src\Ordering\Domain\Order;
 use Src\Ordering\Domain\OrderLine;
 use Src\Ordering\Domain\OrderRepository;
@@ -12,11 +11,6 @@ use Src\Shared\Domain\Money;
 
 class EloquentOrderRepository implements OrderRepository
 {
-    public function nextIdentity(): string
-    {
-        return (string)Str::uuid7();
-    }
-
     /**
      * The sequence row is locked until the transaction ends.
      */

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use RuntimeException;
 use Src\Catalog\Infrastructure\Persistence\ProductModel;
@@ -34,7 +35,7 @@ class OrderConfirmationEmailTest extends TestCase
         Sanctum::actingAs($user);
         $product = ProductModel::factory()->create(['stock' => 10]);
 
-        $response = $this->postJson('/api/orders', ['products' => [['product_id' => $product->id, 'quantity' => 1]]])
+        $response = $this->postJson('/api/orders', ['id' => (string) Str::uuid(), 'products' => [['product_id' => $product->id, 'quantity' => 1]]])
             ->assertCreated();
 
         Event::assertDispatched(OrderCreated::class, fn ($e) => $e->orderId === $response->json('data.id'));
@@ -45,7 +46,7 @@ class OrderConfirmationEmailTest extends TestCase
         Event::fake([OrderCreated::class]);
         Sanctum::actingAs(User::factory()->create());
 
-        $this->postJson('/api/orders', ['products' => []])->assertUnprocessable();
+        $this->postJson('/api/orders', ['id' => (string) Str::uuid(), 'products' => []])->assertUnprocessable();
 
         Event::assertNotDispatched(OrderCreated::class);
     }
@@ -121,6 +122,6 @@ class OrderConfirmationEmailTest extends TestCase
     {
         $product = ProductModel::factory()->create(['name' => 'blue widget', 'price' => '19.99', 'stock' => 10]);
 
-        return app(CreateOrder::class)->handle(new CreateOrderDto($user->id, [new OrderItem($product->id, 2)]));
+        return app(CreateOrder::class)->handle(new CreateOrderDto((string) Str::uuid(), $user->id, [new OrderItem($product->id, 2)]));
     }
 }

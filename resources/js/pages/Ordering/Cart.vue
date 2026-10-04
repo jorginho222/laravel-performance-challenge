@@ -2,10 +2,16 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { formatCents, toCents } from '@/lib/money';
 import { useCartStore, type CartLine } from '@/stores/cart';
+import { uuidv4 } from '@/lib/uuid';
 
 const cart = useCartStore();
 
+// One id per checkout: resubmitting the same order (e.g. a retry after a network error) is rejected
+// by the server instead of placing it twice. Leaving the page after an order clears the cart.
+const orderId = uuidv4();
+
 const form = useForm({
+    id: '',
     products: [] as { product_id: string; quantity: number }[],
 });
 
@@ -16,6 +22,7 @@ const lineError = (line: CartLine, index: number) =>
 
 function placeOrder(): void {
     form.transform(() => ({
+        id: orderId,
         products: cart.lines.map((line) => ({ product_id: line.productId, quantity: line.quantity })),
     })).post('/orders', {
         preserveScroll: true,
@@ -36,6 +43,7 @@ function placeOrder(): void {
         </div>
 
         <template v-else>
+            <p v-if="form.errors.id" class="rounded-md bg-red-50 p-3 text-sm text-red-700">{{ form.errors.id }}</p>
             <p v-if="form.errors.products" class="rounded-md bg-red-50 p-3 text-sm text-red-700">{{ form.errors.products }}</p>
 
             <ul class="divide-y divide-slate-100 rounded-xl bg-white shadow-sm ring-1 ring-slate-200">

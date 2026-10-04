@@ -3,6 +3,7 @@
 namespace Tests\Feature\Web;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Src\Catalog\Infrastructure\Persistence\ProductModel;
 use Src\Identity\Infrastructure\Persistence\User;
@@ -28,7 +29,7 @@ class OrderPagesTest extends TestCase
         $product = ProductModel::factory()->create(['name' => 'blue widget', 'price' => '19.99', 'stock' => 10]);
 
         $response = $this->actingAs($user)
-            ->post('/orders', ['products' => [['product_id' => $product->id, 'quantity' => 2]]]);
+            ->post('/orders', ['id' => (string) Str::uuid(), 'products' => [['product_id' => $product->id, 'quantity' => 2]]]);
 
         $order = OrderModel::sole();
         $response->assertRedirect("/orders/{$order->id}");
@@ -52,7 +53,7 @@ class OrderPagesTest extends TestCase
     {
         $product = ProductModel::factory()->create(['stock' => 10]);
         $this->actingAs(User::factory()->create())
-            ->post('/orders', ['products' => [['product_id' => $product->id, 'quantity' => 1]]]);
+            ->post('/orders', ['id' => (string) Str::uuid(), 'products' => [['product_id' => $product->id, 'quantity' => 1]]]);
 
         $this->actingAs(User::factory()->create())
             ->get('/orders/'.OrderModel::sole()->id)
@@ -72,7 +73,7 @@ class OrderPagesTest extends TestCase
 
         $this->actingAs(User::factory()->create())
             ->from('/cart')
-            ->post('/orders', ['products' => [['product_id' => $product->id, 'quantity' => 2]]])
+            ->post('/orders', ['id' => (string) Str::uuid(), 'products' => [['product_id' => $product->id, 'quantity' => 2]]])
             ->assertRedirect('/cart')
             ->assertSessionHasErrors(["products.{$product->id}" => "Product {$product->name} does not have enough stock."]);
 
@@ -84,7 +85,7 @@ class OrderPagesTest extends TestCase
         $product = ProductModel::factory()->create(['stock' => 10]);
 
         $this->actingAs(User::factory()->admin()->create())
-            ->post('/orders', ['products' => [['product_id' => $product->id, 'quantity' => 1]]])
+            ->post('/orders', ['id' => (string) Str::uuid(), 'products' => [['product_id' => $product->id, 'quantity' => 1]]])
             ->assertForbidden();
     }
 }

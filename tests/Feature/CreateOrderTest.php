@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Src\Catalog\Infrastructure\Persistence\ProductModel;
@@ -132,7 +133,7 @@ class CreateOrderTest extends TestCase
         Sanctum::actingAs($this->user);
         $product = ProductModel::factory()->create(['stock' => 1]);
 
-        $this->postJson('/api/orders', ['products' => [['product_id' => $product->id, 'quantity' => 2]]])
+        $this->postJson('/api/orders', ['id' => (string) Str::uuid(), 'products' => [['product_id' => $product->id, 'quantity' => 2]]])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(["products.{$product->id}" => "Product {$product->name} does not have enough stock."]);
     }
@@ -141,9 +142,11 @@ class CreateOrderTest extends TestCase
     {
         Sanctum::actingAs($this->user);
         $product = ProductModel::factory()->create(['name' => 'blue widget', 'price' => '19.99', 'stock' => 10]);
+        $id = (string) Str::uuid();
 
-        $this->postJson('/api/orders', ['products' => [['product_id' => $product->id, 'quantity' => 2]]])
+        $this->postJson('/api/orders', ['id' => $id, 'products' => [['product_id' => $product->id, 'quantity' => 2]]])
             ->assertCreated()
+            ->assertJsonPath('data.id', $id)
             ->assertJsonPath('data.user_id', $this->user->id)
             ->assertJsonPath('data.number', 1)
             ->assertJsonPath('data.total', '39.98')
@@ -152,7 +155,22 @@ class CreateOrderTest extends TestCase
             ->assertJsonPath('data.products.0.price', '19.99')
             ->assertJsonPath('data.products.0.quantity', 2);
 
-        $this->assertDatabaseHas('orders', ['user_id' => $this->user->id, 'number' => 1]);
+        $this->assertDatabaseHas('orders', ['id' => $id, 'user_id' => $this->user->id, 'number' => 1]);
+    }
+
+    public function test_the_endpoint_rejects_a_resubmitted_order(): void
+    {
+        Sanctum::actingAs($this->user);
+        $product = ProductModel::factory()->create(['stock' => 10]);
+        $payload = ['id' => (string) Str::uuid(), 'products' => [['product_id' => $product->id, 'quantity' => 2]]];
+
+        $this->postJson('/api/orders', $payload)->assertCreated();
+        $this->postJson('/api/orders', $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['id' => 'This order has already been placed.']);
+
+        $this->assertDatabaseCount('orders', 1);
+        $this->assertSame(8, $product->fresh()->stock);
     }
 
     public function test_the_endpoint_requires_authentication(): void
@@ -179,6 +197,9 @@ class CreateOrderTest extends TestCase
     public static function invalidPayloads(): array
     {
         return [
+            'missing id' => [fn (ProductModel $p) => ['products' => [['product_id' => $p->id, 'quantity' => 1]]], 'id'],
+            'id not a uuid' => [fn (ProductModel $p) => ['id' => 'abc', 'products' => [['product_id' => $p->id, 'quantity' => 1]]], 'id'],
+            'id not a v4 uuid' => [fn (ProductModel $p) => ['id' => (string) Str::uuid7(), 'products' => [['product_id' => $p->id, 'quantity' => 1]]], 'id'],
             'missing products' => [fn () => [], 'products'],
             'empty products' => [fn () => ['products' => []], 'products'],
             'unknown product' => [fn () => ['products' => [['product_id' => '01a0edee-18ce-732e-b88d-ce31ddbe92d5', 'quantity' => 1]]], 'products.0.product_id'],
@@ -206,7 +227,7 @@ class CreateOrderTest extends TestCase
      */
     private function handle(array $items): OrderData
     {
-        return app(CreateOrder::class)->handle(new CreateOrderDto($this->user->id, $items));
+        return app(CreateOrder::class)->handle(new CreateOrderDto((string) Str::uuid(), $this->user->id, $items));
     }
 
     /**

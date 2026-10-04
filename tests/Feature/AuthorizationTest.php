@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -80,7 +81,7 @@ class AuthorizationTest extends TestCase
         Sanctum::actingAs(User::factory()->create());
         $product = ProductModel::factory()->create(['stock' => 10]);
 
-        $this->postJson('/api/orders', ['products' => [['product_id' => $product->id, 'quantity' => 1]]])->assertCreated();
+        $this->postJson('/api/orders', ['id' => (string) Str::uuid(), 'products' => [['product_id' => $product->id, 'quantity' => 1]]])->assertCreated();
     }
 
     public function test_admins_cannot_place_orders(): void
@@ -88,7 +89,7 @@ class AuthorizationTest extends TestCase
         Sanctum::actingAs(User::factory()->admin()->create());
         $product = ProductModel::factory()->create(['stock' => 10]);
 
-        $this->postJson('/api/orders', ['products' => [['product_id' => $product->id, 'quantity' => 1]]])->assertForbidden();
+        $this->postJson('/api/orders', ['id' => (string) Str::uuid(), 'products' => [['product_id' => $product->id, 'quantity' => 1]]])->assertForbidden();
 
         $this->assertDatabaseCount('orders', 0);
         $this->assertSame(10, $product->fresh()->stock);

@@ -29,7 +29,8 @@ final class CreateOrder
 
     /**
      * Create an order from product/quantity lines, reserving the products' stock, and announce
-     * it with OrderCreated. Repeated products are merged into a single line.
+     * it with OrderCreated. Repeated products are merged into a single line. The order id comes
+     * from the client, so a resubmitted order is rejected instead of placed twice.
      *
      * @throws ProductNotFound when a product does not exist
      * @throws ProductsUnavailable when a product is not active or does not have enough stock
@@ -52,7 +53,7 @@ final class CreateOrder
             $this->stockReservation->reserve($products, $quantities);
 
             $order = Order::place(
-                $this->orderRepository->nextIdentity(),
+                $dto->orderId,
                 $dto->customerId,
                 $this->orderRepository->nextNumber(),
                 array_map(fn(Product $p) => OrderLine::forProduct($p, $quantities[$p->id]), $products),

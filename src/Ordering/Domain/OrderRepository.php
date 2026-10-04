@@ -4,8 +4,6 @@ namespace Src\Ordering\Domain;
 
 interface OrderRepository
 {
-    public function nextIdentity(): string;
-
     /**
      * The next order number. Call it inside the transaction that saves the order, so
      * concurrent orders get consecutive numbers and a rolled-back order leaves no gap.

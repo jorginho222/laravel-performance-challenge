@@ -3,6 +3,7 @@
 namespace Tests\Feature\Web;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Src\Catalog\Infrastructure\Persistence\CategoryModel;
 use Src\Catalog\Infrastructure\Persistence\ProductModel;
@@ -103,7 +104,7 @@ class CatalogPagesTest extends TestCase
     public function test_a_product_with_orders_is_not_deleted(): void
     {
         $product = ProductModel::factory()->create(['stock' => 10]);
-        app(CreateOrder::class)->handle(new CreateOrderDto(User::factory()->create()->id, [new OrderItem($product->id, 1)]));
+        app(CreateOrder::class)->handle(new CreateOrderDto((string) Str::uuid(), User::factory()->create()->id, [new OrderItem($product->id, 1)]));
 
         $this->actingAs(User::factory()->admin()->create())
             ->from('/products')
