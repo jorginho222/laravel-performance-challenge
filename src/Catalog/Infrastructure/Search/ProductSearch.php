@@ -11,7 +11,7 @@ class ProductSearch
     /**
      * Paginate products: full-text search through Meilisearch (ranked by relevance,
      * page-number pagination) when a search term is given, otherwise a plain database
-     * listing ordered by name with cursor pagination.
+     * listing ordered by name with cursor pagination. Page links keep the filters.
      *
      * @param  array{search?: string, category_id?: string, status?: string}  $filters
      */
@@ -31,7 +31,8 @@ class ProductSearch
             ->when($filters['category_id'] ?? null, fn ($s, $v) => $s->where('category_id', $v))
             ->when($filters['status'] ?? null, fn ($s, $v) => $s->where('status', $v))
             ->query(fn ($q) => $q->with('category'))
-            ->paginate();
+            ->paginate()
+            ->withQueryString();
     }
 
     /**
@@ -44,6 +45,7 @@ class ProductSearch
             ->when($filters['status'] ?? null, fn ($q, $v) => $q->where('status', $v))
             ->orderBy('name')
             ->orderBy('id')
-            ->cursorPaginate();
+            ->cursorPaginate()
+            ->withQueryString();
     }
 }

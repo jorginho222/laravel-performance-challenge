@@ -18,12 +18,14 @@ use Src\Shared\Application\TransactionManager;
 final class CreateOrder
 {
     public function __construct(
-        private OrderRepository $orderRepository,
-        private ProductRepository $productRepository,
-        private StockReservation $stockReservation,
+        private OrderRepository    $orderRepository,
+        private ProductRepository  $productRepository,
+        private StockReservation   $stockReservation,
         private TransactionManager $transactionManager,
-        private EventBus $eventBus,
-    ) {}
+        private EventBus           $eventBus,
+    )
+    {
+    }
 
     /**
      * Create an order from product/quantity lines, reserving the products' stock, and announce
@@ -42,7 +44,7 @@ final class CreateOrder
         $order = $this->transactionManager->run(function () use ($dto, $quantities) {
             $products = $this->productRepository->lockByIds(array_keys($quantities));
 
-            $missing = array_diff(array_keys($quantities), array_map(fn (Product $p) => $p->id, $products));
+            $missing = array_diff(array_keys($quantities), array_map(fn(Product $p) => $p->id, $products));
             if ($missing !== []) {
                 throw new ProductNotFound(array_values($missing));
             }
@@ -53,8 +55,8 @@ final class CreateOrder
                 $this->orderRepository->nextIdentity(),
                 $dto->customerId,
                 $this->orderRepository->nextNumber(),
-                array_map(fn (Product $p) => OrderLine::forProduct($p, $quantities[$p->id]), $products),
-                new DateTimeImmutable('@'.time()),
+                array_map(fn(Product $p) => OrderLine::forProduct($p, $quantities[$p->id]), $products),
+                new DateTimeImmutable('@' . time()),
             );
 
             foreach ($products as $product) {
@@ -65,7 +67,6 @@ final class CreateOrder
             return $order;
         });
 
-        // Published once the transaction is committed, so listeners never see a rolled-back order.
         $this->eventBus->publish(...$order->pullDomainEvents());
 
         return OrderData::fromOrder($order);

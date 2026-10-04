@@ -14,7 +14,7 @@ class EloquentOrderRepository implements OrderRepository
 {
     public function nextIdentity(): string
     {
-        return (string) Str::uuid7();
+        return (string)Str::uuid7();
     }
 
     /**
@@ -42,7 +42,7 @@ class EloquentOrderRepository implements OrderRepository
         ]);
 
         $model->products()->attach(
-            collect($order->lines)->mapWithKeys(fn (OrderLine $line) => [$line->productId => ['quantity' => $line->quantity]])->all()
+            collect($order->lines)->mapWithKeys(fn(OrderLine $line) => [$line->productId => ['quantity' => $line->quantity]])->all()
         );
     }
 
@@ -58,11 +58,11 @@ class EloquentOrderRepository implements OrderRepository
             $model->id,
             $model->user_id,
             $model->number,
-            $model->products->map(fn (OrderableProductModel $product) => new OrderLine(
+            $model->products->map(fn(OrderableProductModel $product) => new OrderLine(
                 $product->id,
                 $product->name,
                 Money::fromDecimal($product->price),
-                (int) $product->pivot->quantity,
+                (int)$product->pivot->quantity,
             ))->all(),
             Money::fromDecimal($model->total),
             DateTimeImmutable::createFromInterface($model->created_at),

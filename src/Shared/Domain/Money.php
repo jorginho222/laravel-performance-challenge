@@ -27,15 +27,15 @@ final readonly class Money
     }
 
     /**
-     * @param  string  $amount  a decimal amount such as "19.99", "5.5" or "3"
+     * @param string $amount a decimal amount such as "19.99", "5.5" or "3"
      */
     public static function fromDecimal(string $amount): self
     {
-        if (! preg_match('/^(\d+)(?:\.(\d{1,2}))?$/', $amount, $matches)) {
+        if (!preg_match('/^(\d+)(?:\.(\d{1,2}))?$/', $amount, $matches)) {
             throw new InvalidArgumentException("Invalid amount: {$amount}.");
         }
 
-        return new self((int) $matches[1] * 100 + (int) str_pad($matches[2] ?? '0', 2, '0'));
+        return new self((int)$matches[1] * 100 + (int)str_pad($matches[2] ?? '0', 2, '0'));
     }
 
     public function add(self $other): self

@@ -18,7 +18,7 @@ class ProductController
     {
         Gate::authorize('viewAny', ProductModel::class);
 
-        $products = $search->paginate($request->validated());
+        $products = $search->paginate($request->filters());
 
         return ProductResource::collection($products);
     }

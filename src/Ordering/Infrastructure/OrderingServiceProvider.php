@@ -2,8 +2,11 @@
 
 namespace Src\Ordering\Infrastructure;
 
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Src\Ordering\Application\OrderData;
 use Src\Ordering\Application\SendOrderConfirmation\CustomerDirectory;
 use Src\Ordering\Application\SendOrderConfirmation\OrderConfirmationMailer;
 use Src\Ordering\Domain\Events\OrderCreated;
@@ -30,5 +33,8 @@ class OrderingServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Event::listen(OrderCreated::class, SendOrderConfirmationEmail::class);
+
+        // Orders are private to the customer who placed them.
+        Gate::define('view-order', fn (Authenticatable $user, OrderData $order) => $user->getAuthIdentifier() === $order->customerId);
     }
 }

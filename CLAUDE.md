@@ -58,7 +58,7 @@ Business code lives in `src/` (namespace `Src\`, PSR-4), one directory per bound
   and `SharedServiceProvider`).
 - `Ordering` (full structure): `Domain` (entities `Order`/`OrderLine`/`Product`, domain service
   `StockReservation`, `OrderCreated` event, repository interfaces, domain exceptions),
-  `Application` (use cases `CreateOrder` and `SendOrderConfirmation` with a DTO in and
+  `Application` (use cases `CreateOrder`, `GetOrder` and `SendOrderConfirmation` with a DTO in and
   `OrderData` out, plus ports `CustomerDirectory` and `OrderConfirmationMailer`),
   `Infrastructure` (Eloquent models `*Model` + repositories, controller/FormRequest/Resource,
   queued listener, mail, `OrderingServiceProvider`).
@@ -91,6 +91,27 @@ Authorization:
   create/update/delete to `manage-catalog`. They are enforced in the FormRequests' `authorize()`
   (store/update, so 403 comes before validation) and with `Gate::authorize` in the controllers
   (index/show/destroy). Ordering checks `place-orders` in `StoreOrderRequest::authorize()`.
+
+## Frontend (Inertia v3 + Vue 3 + TypeScript + Pinia)
+
+- Web routes (`routes/web.php`, session auth) render Inertia pages; the API (`routes/api.php`,
+  Sanctum tokens, route names `api.*`) is unchanged. Web controllers are one more adapter per
+  context in `Infrastructure/Http/Web/` and reuse the same FormRequests (authorization +
+  validation), policies, Resources and use cases as the API controllers.
+- Pages: `resources/js/pages/<Context>/...` (e.g. `Catalog/Products/ProductIndex`), mirroring the
+  bounded contexts. Layout is picked in `app.ts` (`Identity/*` use `GuestLayout`).
+- Shared props (`app/Http/Middleware/HandleInertiaRequests.php`): `auth.user` and `auth.can`
+  (`manageCatalog`, `placeOrders`, from the gates), typed in `resources/js/types/inertia.d.ts`.
+- Notifications: `Inertia::flash('toast', ['type' => 'success'|'error', 'message' => ...])` on the
+  server; `app.ts` turns flash data into toasts (Pinia `toasts` store).
+- State: Pinia. `stores/cart.ts` holds the cart client-side (per user, in localStorage) until
+  `POST /orders`; order errors come back as `products.{id}` (domain) or `products.{index}.*`
+  (validation).
+- Pass a single JsonResource prop as `->resolve()`: Inertia would otherwise wrap it in `data`
+  (collections are passed as is and keep `data`/`links`/`meta`).
+- Commands: `sail npm run dev` (HMR), `sail npm run build`, `sail npm run typecheck` (vue-tsc).
+  TypeScript is pinned to 6.x: TS 7 (native compiler) has no JS API, which vue-tsc needs.
+- Tests call `withoutVite()` (in `tests/TestCase.php`); `assertInertia` checks that page files exist.
 
 ## Loading large product volumes (1M+ rows) for performance tests
 
