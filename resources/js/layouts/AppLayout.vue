@@ -23,7 +23,7 @@ const isActive = (href: string) => page.url.startsWith(href);
     <div class="min-h-screen">
         <header class="border-b border-slate-200 bg-white">
             <nav class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
-                <Link href="/products" class="text-lg font-semibold text-indigo-600">Shop</Link>
+                <Link href="/products" class="text-lg font-semibold text-indigo-600">Shop App</Link>
 
                 <div class="flex gap-1">
                     <Link

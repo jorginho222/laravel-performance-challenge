@@ -7,17 +7,12 @@ export interface CartLine {
     productId: string;
     name: string;
     price: string;
-    /** Stock when the product was added; the server checks the real stock on checkout. */
     stock: number;
     quantity: number;
 }
 
 const storageKey = (userId: string) => `cart:${userId}`;
 
-/**
- * The shopping cart lives in the browser until it's placed as an order. It's kept per user
- * in localStorage, so it survives reloads and isn't shared with whoever signs in next.
- */
 export const useCartStore = defineStore('cart', () => {
     const ownerId = ref<string | null>(null);
     const lines = ref<CartLine[]>([]);
