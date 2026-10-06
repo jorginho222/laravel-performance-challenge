@@ -96,8 +96,8 @@ Authorization:
 
 - Web routes (`routes/web.php`, session auth) render Inertia pages; the API (`routes/api.php`,
   Sanctum tokens, route names `api.*`) is unchanged. Web controllers are one more adapter per
-  context in `Infrastructure/Http/Web/` and reuse the same FormRequests (authorization +
-  validation), policies, Resources and use cases as the API controllers.
+  context: `Infrastructure/Http/Web/*WebController` next to `Infrastructure/Http/Api/*ApiController`,
+  reusing the same FormRequests (authorization + validation), policies, Resources and use cases.
 - Pages: `resources/js/pages/<Context>/...` (e.g. `Catalog/Products/ProductIndex`), mirroring the
   bounded contexts. Layout is picked in `app.ts` (`Identity/*` use `GuestLayout`).
 - Shared props (`app/Http/Middleware/HandleInertiaRequests.php`): `auth.user` and `auth.can`

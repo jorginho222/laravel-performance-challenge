@@ -18,7 +18,7 @@ use Src\Ordering\Application\CreateOrder\CreateOrderDto;
 use Src\Ordering\Application\CreateOrder\OrderItem;
 use Src\Ordering\Application\OrderData;
 use Src\Ordering\Domain\Events\OrderCreated;
-use Src\Ordering\Infrastructure\Listeners\SendOrderConfirmationEmail;
+use Src\Ordering\Infrastructure\Listeners\SendOrderConfirmationListener;
 use Src\Ordering\Infrastructure\Mail\LaravelOrderConfirmationMailer;
 use Src\Ordering\Infrastructure\Mail\OrderConfirmationMail;
 use Src\Ordering\Infrastructure\Persistence\OrderModel;
@@ -56,7 +56,7 @@ class OrderConfirmationEmailTest extends TestCase
         Queue::fake();
         $order = $this->order(User::factory()->create());
 
-        Queue::assertPushed(CallQueuedListener::class, fn ($job) => $job->class === SendOrderConfirmationEmail::class
+        Queue::assertPushed(CallQueuedListener::class, fn ($job) => $job->class === SendOrderConfirmationListener::class
             && $job->data[0]->orderId === $order->id);
     }
 
@@ -77,7 +77,7 @@ class OrderConfirmationEmailTest extends TestCase
         $order = $this->order(User::factory()->create());
         OrderModel::destroy($order->id);
 
-        app(SendOrderConfirmationEmail::class)->handle(new OrderCreated($order->id));
+        app(SendOrderConfirmationListener::class)->handle(new OrderCreated($order->id));
 
         Mail::assertNothingSent();
     }
@@ -87,7 +87,7 @@ class OrderConfirmationEmailTest extends TestCase
         Log::spy();
         $order = $this->order(User::factory()->create());
 
-        app(SendOrderConfirmationEmail::class)->failed(new OrderCreated($order->id), new RuntimeException('smtp down'));
+        app(SendOrderConfirmationListener::class)->failed(new OrderCreated($order->id), new RuntimeException('smtp down'));
 
         Log::shouldHaveReceived('error')->once()->withArgs(fn ($message, $context) => str_contains($message, $order->id)
             && $context['exception'] === 'smtp down');

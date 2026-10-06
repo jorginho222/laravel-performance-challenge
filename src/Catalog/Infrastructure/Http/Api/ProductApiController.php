@@ -1,6 +1,6 @@
 <?php
 
-namespace Src\Catalog\Infrastructure\Http\Controllers;
+namespace Src\Catalog\Infrastructure\Http\Api;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -12,7 +12,7 @@ use Src\Catalog\Infrastructure\Http\Resources\ProductResource;
 use Src\Catalog\Infrastructure\Persistence\ProductModel;
 use Src\Catalog\Infrastructure\Search\ProductSearch;
 
-class ProductController
+class ProductApiController
 {
     public function index(IndexProductRequest $request, ProductSearch $search): AnonymousResourceCollection
     {

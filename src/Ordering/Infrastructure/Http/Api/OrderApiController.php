@@ -1,13 +1,13 @@
 <?php
 
-namespace Src\Ordering\Infrastructure\Http\Controllers;
+namespace Src\Ordering\Infrastructure\Http\Api;
 
 use Illuminate\Http\JsonResponse;
 use Src\Ordering\Application\CreateOrder\CreateOrder;
 use Src\Ordering\Infrastructure\Http\Requests\StoreOrderRequest;
 use Src\Ordering\Infrastructure\Http\Resources\OrderResource;
 
-class OrderController
+class OrderApiController
 {
     public function store(StoreOrderRequest $request, CreateOrder $createOrder): JsonResponse
     {

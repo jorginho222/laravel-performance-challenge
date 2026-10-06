@@ -1,6 +1,6 @@
 <?php
 
-namespace Src\Identity\Infrastructure\Http\Controllers;
+namespace Src\Identity\Infrastructure\Http\Api;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -10,7 +10,7 @@ use Src\Identity\Infrastructure\Http\Requests\LoginRequest;
 use Src\Identity\Infrastructure\Http\Requests\RegisterRequest;
 use Src\Identity\Infrastructure\Persistence\User;
 
-class AuthController
+class AuthApiController
 {
     public function register(RegisterRequest $request): JsonResponse
     {

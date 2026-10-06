@@ -12,7 +12,7 @@ use Src\Ordering\Application\SendOrderConfirmation\OrderConfirmationMailer;
 use Src\Ordering\Domain\Events\OrderCreated;
 use Src\Ordering\Domain\OrderRepository;
 use Src\Ordering\Domain\ProductRepository;
-use Src\Ordering\Infrastructure\Listeners\SendOrderConfirmationEmail;
+use Src\Ordering\Infrastructure\Listeners\SendOrderConfirmationListener;
 use Src\Ordering\Infrastructure\Mail\LaravelOrderConfirmationMailer;
 use Src\Ordering\Infrastructure\Persistence\DatabaseCustomerDirectory;
 use Src\Ordering\Infrastructure\Persistence\EloquentOrderRepository;
@@ -32,7 +32,7 @@ class OrderingServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        Event::listen(OrderCreated::class, SendOrderConfirmationEmail::class);
+        Event::listen(OrderCreated::class, SendOrderConfirmationListener::class);
 
         // Orders are private to the customer who placed them.
         Gate::define('view-order', fn (Authenticatable $user, OrderData $order) => $user->getAuthIdentifier() === $order->customerId);

@@ -11,7 +11,7 @@ use Src\Ordering\Application\GetOrder\GetOrder;
 use Src\Ordering\Infrastructure\Http\Requests\StoreOrderRequest;
 use Src\Ordering\Infrastructure\Http\Resources\OrderResource;
 
-class OrderController
+class OrderWebController
 {
     public function store(StoreOrderRequest $request, CreateOrder $createOrder): RedirectResponse
     {

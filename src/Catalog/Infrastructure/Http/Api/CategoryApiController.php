@@ -1,6 +1,6 @@
 <?php
 
-namespace Src\Catalog\Infrastructure\Http\Controllers;
+namespace Src\Catalog\Infrastructure\Http\Api;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,7 +11,7 @@ use Src\Catalog\Infrastructure\Http\Requests\UpdateCategoryRequest;
 use Src\Catalog\Infrastructure\Http\Resources\CategoryResource;
 use Src\Catalog\Infrastructure\Persistence\CategoryModel;
 
-class CategoryController
+class CategoryApiController
 {
     public function index(Request $request): JsonResponse
     {

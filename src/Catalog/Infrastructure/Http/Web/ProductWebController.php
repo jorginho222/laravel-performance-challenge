@@ -14,7 +14,7 @@ use Src\Catalog\Infrastructure\Persistence\CategoryOptions;
 use Src\Catalog\Infrastructure\Persistence\ProductModel;
 use Src\Catalog\Infrastructure\Search\ProductSearch;
 
-class ProductController
+class ProductWebController
 {
     public function index(IndexProductRequest $request, ProductSearch $search): Response
     {

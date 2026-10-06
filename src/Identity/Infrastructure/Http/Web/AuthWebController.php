@@ -15,7 +15,7 @@ use Src\Identity\Infrastructure\Persistence\User;
 /**
  * Session authentication for the web frontend (the API authenticates with Sanctum tokens).
  */
-class AuthController
+class AuthWebController
 {
     public function showLogin(): Response
     {

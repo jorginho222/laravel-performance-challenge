@@ -13,7 +13,7 @@ use Src\Catalog\Infrastructure\Http\Requests\UpdateCategoryRequest;
 use Src\Catalog\Infrastructure\Http\Resources\CategoryResource;
 use Src\Catalog\Infrastructure\Persistence\CategoryModel;
 
-class CategoryController
+class CategoryWebController
 {
     public function index(Request $request): Response
     {

@@ -13,7 +13,7 @@ use Throwable;
  * Queued (Redis): sends the confirmation email of a new order. After all attempts fail,
  * the job is stored in the failed_jobs table (see `queue:failed` and `queue:retry`).
  */
-class SendOrderConfirmationEmail implements ShouldQueue
+class SendOrderConfirmationListener implements ShouldQueue
 {
     use InteractsWithQueue;
 
